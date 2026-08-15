@@ -292,14 +292,17 @@ function negated(text: string, term: string) {
       return false;
     }
 
-    const before = text.slice(Math.max(0, idx - 50), idx);
+    // Only inspect a very small window immediately before the term.
+    // This prevents "not cooling and there is a burning smell"
+    // from incorrectly negating "burning smell".
+    const before = text.slice(Math.max(0, idx - 30), idx).trim();
 
-    const directlyNegated =
-      /(?:\bno\b|\bwithout\b|\bisn't\b|\bis not\b|\baren't\b|\bare not\b|\bnot\b)\s+(?:[\w'-]+\s+){0,3}$/i.test(
+    const directNegation =
+      /(?:^|\s)(?:no|without|isn't|is not|aren't|are not|there is no|there are no)\s+(?:[\w'-]+\s+){0,1}$/i.test(
         before,
       );
 
-    if (directlyNegated) {
+    if (directNegation) {
       searchFrom = idx + term.length;
       continue;
     }
