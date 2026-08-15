@@ -553,6 +553,7 @@ const LOW_TERMS = [
   "minor",
 ];
 
+function detectCategory(text: string): {
 const applianceEvidence = has(text, [
   "refrigerator",
   "fridge",
@@ -577,7 +578,7 @@ if (applianceEvidence && applianceBurningSmell) {
   return {
     category: "Appliance",
     strength: Math.max(bestScore, 20),
-  };
+  }
 }
   /*
    * HVAC + burning smell should remain HVAC
