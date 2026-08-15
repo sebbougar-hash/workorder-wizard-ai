@@ -254,7 +254,6 @@ export function analyzeMaintenanceRequest(input: {
   let category: Category;
   if (selectedCategory && selectedCategory !== "Other") {
     const selectedSupported =
-      selectedCategory === "Other" ||
       countMatches(text, KEYWORDS[selectedCategory as Exclude<Category, "Other">]) > 0;
     category =
       !selectedSupported && detected.category && detected.strength >= 2

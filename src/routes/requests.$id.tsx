@@ -168,7 +168,7 @@ function RequestDetails() {
         <div className="ml-auto flex items-center gap-2">
           <Label className="text-xs text-muted-foreground">Status</Label>
           <Select value={request.status} onValueChange={(v) => setStatus(v as Status)}>
-            <SelectTrigger size="sm" className="w-40">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

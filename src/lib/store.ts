@@ -39,11 +39,11 @@ export interface MaintenanceRequest {
   riskLevel: Priority;
   status: Status;
   createdAt: string;
-  assignedTechnician?: string;
-  imageName?: string;
-  imageDataUrl?: string;
+  assignedTechnician?: string | undefined;
+  imageName?: string | undefined;
+  imageDataUrl?: string | undefined;
   analysis: Analysis;
-  tenantMessage?: string;
+  tenantMessage?: string | undefined;
 }
 
 interface SeedInput {
@@ -56,7 +56,7 @@ interface SeedInput {
   priority: Priority;
   status: Status;
   createdAt: string;
-  assignedTechnician?: string;
+  assignedTechnician?: string | undefined;
 }
 
 const SEEDS: SeedInput[] = [
@@ -132,10 +132,10 @@ export function addRequest(input: {
   description: string;
   category: Category;
   priority: Priority;
-  imageName?: string;
-  imageDataUrl?: string;
+  imageName?: string | undefined;
+  imageDataUrl?: string | undefined;
   analysis: Analysis;
-  tenantMessage?: string;
+  tenantMessage?: string | undefined;
 }): MaintenanceRequest {
   const created: MaintenanceRequest = {
     id: `REQ-${nextId++}`,
