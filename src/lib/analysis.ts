@@ -444,15 +444,14 @@ function negated(text: string, term: string) {
     if (index === -1) {
       return false;
     }
-  }
-}
+
     const before = text
-      .slice(Math.max(0, index - 40), index)
+      .slice(Math.max(0, index - 30), index)
       .trim();
 
     const directNegation =
-      /(?:^|\s)(?:no|without|isn't|is not|aren't|are not|there is no|there are no)\s+(?:[\w'-]+\s+){0,2}$/i.test(
-        before,
+      /(?:^|\s)(?:no|without|isn't|is not|aren't|are not|there is no|there are no)\s+(?:[\w'-]+\s+){0,1}$/i.test(
+        before
       );
 
     if (directNegation) {
@@ -463,6 +462,7 @@ function negated(text: string, term: string) {
     return false;
   }
 }
+  
 
 function has(text: string, terms: string[]) {
   return terms.some(
