@@ -26,7 +26,12 @@ export const CATEGORIES: Category[] = [
   "Other",
 ];
 
-export const PRIORITIES: Priority[] = ["Low", "Medium", "High", "Critical"];
+export const PRIORITIES: Priority[] = [
+  "Low",
+  "Medium",
+  "High",
+  "Critical",
+];
 
 export const STATUSES: Status[] = [
   "New",
@@ -56,19 +61,6 @@ export interface Analysis {
 }
 
 const KEYWORDS: Record<Exclude<Category, "Other">, string[]> = {
-  Appliance: [
-    "refrigerator",
-    "fridge",
-    "freezer",
-    "dishwasher",
-    "washing machine",
-    "washer",
-    "dryer",
-    "oven",
-    "stove",
-    "microwave",
-  ],
-
   HVAC: [
     "air conditioner",
     "air conditioning",
@@ -130,10 +122,24 @@ const KEYWORDS: Record<Exclude<Category, "Other">, string[]> = {
     "electrical panel",
     "electrical shock",
     "electric shock",
+    "electrocution",
     "exposed wiring",
     "exposed wire",
     "live wire",
     "live wiring",
+  ],
+
+  Appliance: [
+    "refrigerator",
+    "fridge",
+    "freezer",
+    "dishwasher",
+    "washing machine",
+    "washer",
+    "dryer",
+    "oven",
+    "stove",
+    "microwave",
   ],
 
   Structural: [
@@ -167,76 +173,226 @@ const CATEGORY_COMBINATIONS: Record<
   Exclude<Category, "Other">,
   { terms: string[]; weight: number }[]
 > = {
-  Electrical: [
-    { terms: ["outlet", "breaker"], weight: 6 },
-    { terms: ["outlets", "breaker"], weight: 6 },
-    { terms: ["socket", "breaker"], weight: 6 },
-    { terms: ["sockets", "breaker"], weight: 6 },
-
-    { terms: ["outlet", "no power"], weight: 6 },
-    { terms: ["outlets", "no power"], weight: 6 },
-    { terms: ["socket", "no power"], weight: 6 },
-    { terms: ["sockets", "no power"], weight: 6 },
-
-    { terms: ["breaker", "keeps tripping"], weight: 8 },
-    { terms: ["breaker", "keeps trip"], weight: 8 },
-    { terms: ["breaker", "trips"], weight: 6 },
-    { terms: ["breaker", "trip"], weight: 5 },
-
-    { terms: ["sparks", "outlet"], weight: 7 },
-    { terms: ["sparking", "outlet"], weight: 7 },
-    { terms: ["spark", "outlet"], weight: 7 },
-
-    { terms: ["sparks", "electrical"], weight: 7 },
-    { terms: ["sparking", "electrical"], weight: 7 },
-
-    { terms: ["burning smell", "outlet"], weight: 7 },
-    { terms: ["burning smell", "electrical"], weight: 7 },
-
-    { terms: ["exposed wire", "electrical"], weight: 8 },
-    { terms: ["exposed wiring", "electrical"], weight: 8 },
-    { terms: ["live wire", "electrical"], weight: 8 },
-    { terms: ["live wiring", "electrical"], weight: 8 },
-
-    { terms: ["short circuit", "power"], weight: 7 },
-    { terms: ["short circuit", "electrical"], weight: 7 },
+  HVAC: [
+    {
+      terms: ["air conditioner", "not cooling"],
+      weight: 8,
+    },
+    {
+      terms: ["air conditioning", "not cooling"],
+      weight: 8,
+    },
+    {
+      terms: ["air conditioner", "burning smell"],
+      weight: 12,
+    },
+    {
+      terms: ["air conditioning", "burning smell"],
+      weight: 12,
+    },
+    {
+      terms: ["hvac", "burning smell"],
+      weight: 12,
+    },
+    {
+      terms: ["furnace", "burning smell"],
+      weight: 12,
+    },
+    {
+      terms: ["heater", "burning smell"],
+      weight: 12,
+    },
+    {
+      terms: ["cooling system", "burning smell"],
+      weight: 12,
+    },
+    {
+      terms: ["thermostat", "heating"],
+      weight: 6,
+    },
+    {
+      terms: ["thermostat", "cooling"],
+      weight: 6,
+    },
+    {
+      terms: ["furnace", "not heating"],
+      weight: 8,
+    },
+    {
+      terms: ["heater", "not heating"],
+      weight: 8,
+    },
   ],
 
-  HVAC: [
-    { terms: ["thermostat", "heating"], weight: 5 },
-    { terms: ["thermostat", "cooling"], weight: 5 },
-    { terms: ["air conditioner", "not cooling"], weight: 6 },
-    { terms: ["air conditioning", "not cooling"], weight: 6 },
-    { terms: ["furnace", "not heating"], weight: 6 },
-    { terms: ["heater", "not heating"], weight: 6 },
+  Electrical: [
+    {
+      terms: ["outlet", "breaker"],
+      weight: 8,
+    },
+    {
+      terms: ["outlets", "breaker"],
+      weight: 8,
+    },
+    {
+      terms: ["socket", "breaker"],
+      weight: 8,
+    },
+    {
+      terms: ["sockets", "breaker"],
+      weight: 8,
+    },
+    {
+      terms: ["outlet", "no power"],
+      weight: 8,
+    },
+    {
+      terms: ["outlets", "no power"],
+      weight: 8,
+    },
+    {
+      terms: ["socket", "no power"],
+      weight: 8,
+    },
+    {
+      terms: ["sockets", "no power"],
+      weight: 8,
+    },
+    {
+      terms: ["breaker", "keeps tripping"],
+      weight: 10,
+    },
+    {
+      terms: ["breaker", "trips"],
+      weight: 8,
+    },
+    {
+      terms: ["sparks", "outlet"],
+      weight: 10,
+    },
+    {
+      terms: ["sparking", "outlet"],
+      weight: 10,
+    },
+    {
+      terms: ["spark", "outlet"],
+      weight: 10,
+    },
+    {
+      terms: ["sparks", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["sparking", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["burning smell", "outlet"],
+      weight: 10,
+    },
+    {
+      terms: ["burning smell", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["exposed wire", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["exposed wiring", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["live wire", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["live wiring", "electrical"],
+      weight: 10,
+    },
+    {
+      terms: ["short circuit", "power"],
+      weight: 10,
+    },
+    {
+      terms: ["short circuit", "electrical"],
+      weight: 10,
+    },
   ],
 
   Appliance: [
-    { terms: ["refrigerator", "not cooling"], weight: 6 },
-    { terms: ["fridge", "not cooling"], weight: 6 },
-    { terms: ["dishwasher", "not draining"], weight: 6 },
-    { terms: ["washing machine", "not starting"], weight: 6 },
-    { terms: ["washer", "not starting"], weight: 6 },
+    {
+      terms: ["refrigerator", "not cooling"],
+      weight: 8,
+    },
+    {
+      terms: ["fridge", "not cooling"],
+      weight: 8,
+    },
+    {
+      terms: ["dishwasher", "not draining"],
+      weight: 8,
+    },
+    {
+      terms: ["washing machine", "not starting"],
+      weight: 8,
+    },
+    {
+      terms: ["washer", "not starting"],
+      weight: 8,
+    },
   ],
 
   Plumbing: [
-    { terms: ["pipe", "water leak"], weight: 6 },
-    { terms: ["sink", "water leak"], weight: 6 },
-    { terms: ["toilet", "water leak"], weight: 6 },
-    { terms: ["faucet", "water leak"], weight: 6 },
+    {
+      terms: ["pipe", "water leak"],
+      weight: 8,
+    },
+    {
+      terms: ["sink", "water leak"],
+      weight: 8,
+    },
+    {
+      terms: ["toilet", "water leak"],
+      weight: 8,
+    },
+    {
+      terms: ["faucet", "water leak"],
+      weight: 8,
+    },
   ],
 
   Structural: [
-    { terms: ["door", "lock"], weight: 5 },
-    { terms: ["window", "frame"], weight: 5 },
-    { terms: ["ceiling", "water"], weight: 5 },
-    { terms: ["roof", "water"], weight: 5 },
+    {
+      terms: ["door", "lock"],
+      weight: 6,
+    },
+    {
+      terms: ["window", "frame"],
+      weight: 6,
+    },
+    {
+      terms: ["ceiling", "water"],
+      weight: 6,
+    },
+    {
+      terms: ["roof", "water"],
+      weight: 6,
+    },
   ],
 
   Pest: [
-    { terms: ["cockroach", "kitchen"], weight: 5 },
-    { terms: ["mouse", "droppings"], weight: 6 },
-    { terms: ["rat", "droppings"], weight: 6 },
+    {
+      terms: ["cockroach", "kitchen"],
+      weight: 6,
+    },
+    {
+      terms: ["mouse", "droppings"],
+      weight: 8,
+    },
+    {
+      terms: ["rat", "droppings"],
+      weight: 8,
+    },
   ],
 };
 
@@ -264,23 +420,14 @@ function normalize(text: string) {
 }
 
 /*
- * Negation detection.
+ * Checks whether a term is actually negated.
  *
- * IMPORTANT:
- * We only consider a term negated when the negation is
- * directly connected to that term.
- *
- * Correct:
- * "no burning smell" -> burning smell is negated
+ * Examples:
+ * "no smoke" -> smoke is negated
  * "without sparks" -> sparks are negated
- * "not burning smell" -> burning smell is negated
+ * "not cooling" -> cooling is NOT considered a negated "burning smell"
  *
- * Also correct:
- * "not cooling and there is a burning smell"
- * -> burning smell is NOT negated.
- *
- * This fixes the previous bug where "not" from an earlier
- * clause incorrectly negated a later safety term.
+ * The important point is that the negation window is intentionally short.
  */
 function negated(text: string, term: string) {
   let searchFrom = 0;
@@ -292,10 +439,9 @@ function negated(text: string, term: string) {
       return false;
     }
 
-    // Only inspect a very small window immediately before the term.
-    // This prevents "not cooling and there is a burning smell"
-    // from incorrectly negating "burning smell".
-    const before = text.slice(Math.max(0, idx - 30), idx).trim();
+    const before = text
+      .slice(Math.max(0, idx - 30), idx)
+      .trim();
 
     const directNegation =
       /(?:^|\s)(?:no|without|isn't|is not|aren't|are not|there is no|there are no)\s+(?:[\w'-]+\s+){0,1}$/i.test(
@@ -313,14 +459,22 @@ function negated(text: string, term: string) {
 
 function has(text: string, terms: string[]) {
   return terms.some(
-    (term) => text.includes(term) && !negated(text, term),
+    (term) =>
+      text.includes(term) &&
+      !negated(text, term),
   );
 }
 
-function countMatches(text: string, terms: string[]) {
+function countMatches(
+  text: string,
+  terms: string[],
+) {
   return terms.reduce(
     (count, term) =>
-      count + (text.includes(term) && !negated(text, term) ? 1 : 0),
+      count +
+      (text.includes(term) && !negated(text, term)
+        ? 1
+        : 0),
     0,
   );
 }
@@ -355,6 +509,8 @@ const HIGH_TERMS = [
   "burning smell",
   "smell of burning",
   "burning odor",
+  "burning scent",
+  "smoke",
   "sparks",
   "spark",
   "sparking",
@@ -428,12 +584,16 @@ function detectCategory(text: string): {
   ) as Exclude<Category, "Other">[];
 
   for (const category of categories) {
-    let score = countMatches(text, KEYWORDS[category]) * 2;
+    let score =
+      countMatches(text, KEYWORDS[category]) * 2;
 
-    for (const combination of CATEGORY_COMBINATIONS[category]) {
+    for (const combination of CATEGORY_COMBINATIONS[
+      category
+    ]) {
       const matches = combination.terms.every(
         (term) =>
-          text.includes(term) && !negated(text, term),
+          text.includes(term) &&
+          !negated(text, term),
       );
 
       if (matches) {
@@ -447,10 +607,405 @@ function detectCategory(text: string): {
     }
   }
 
+  /*
+   * Special rule:
+   *
+   * If the request contains HVAC language together with
+   * "burning smell", HVAC wins unless there is explicit
+   * electrical equipment involved.
+   */
+  const hvacEvidence = has(text, [
+    "air conditioner",
+    "air conditioning",
+    "hvac",
+    "furnace",
+    "heater",
+    "cooling system",
+    "heat pump",
+  ]);
+
+  const burningSmell = has(text, [
+    "burning smell",
+    "smell of burning",
+    "burning odor",
+    "burning scent",
+  ]);
+
+  const explicitElectricalEquipment = has(
+    text,
+    [
+      "outlet",
+      "socket",
+      "breaker",
+      "electrical panel",
+      "wiring",
+      "exposed wire",
+      "exposed wiring",
+      "live wire",
+      "live wiring",
+    ],
+  );
+
+  if (
+    hvacEvidence &&
+    burningSmell &&
+    !explicitElectricalEquipment
+  ) {
+    return {
+      category: "HVAC",
+      strength: Math.max(bestScore, 20),
+    };
+  }
+
+  if (bestCategory === null) {
+    return {
+      category: null,
+      strength: 0,
+    };
+  }
+
   return {
     category: bestCategory,
     strength: bestScore,
   };
+}
+
+function detectPriority(
+  text: string,
+  category: Category,
+): Priority {
+  /*
+   * CRITICAL has precedence over everything else.
+   */
+  if (has(text, CRITICAL_TERMS)) {
+    return "Critical";
+  }
+
+  /*
+   * HIGH:
+   *
+   * A burning smell is an immediate safety concern.
+   * This remains HIGH even when it appears together with
+   * "not cooling".
+   *
+   * Example:
+   * "The air conditioner is not cooling and there is
+   * a burning smell coming from the unit."
+   *
+   * => HIGH
+   */
+  const burningSmell = has(text, [
+    "burning smell",
+    "smell of burning",
+    "burning odor",
+    "burning scent",
+  ]);
+
+  if (burningSmell) {
+    return "High";
+  }
+
+  if (has(text, HIGH_TERMS)) {
+    return "High";
+  }
+
+  /*
+   * Category-specific safety escalation.
+   */
+  if (
+    category === "Electrical" &&
+    has(text, [
+      "spark",
+      "sparks",
+      "sparking",
+      "exposed wire",
+      "exposed wiring",
+      "live wire",
+      "live wiring",
+      "breaker keeps tripping",
+      "breaker trips",
+    ])
+  ) {
+    return "High";
+  }
+
+  if (
+    category === "Plumbing" &&
+    has(text, [
+      "major flooding",
+      "flooding",
+      "flooded",
+      "sewage backup",
+    ])
+  ) {
+    return "High";
+  }
+
+  if (has(text, LOW_TERMS)) {
+    return "Low";
+  }
+
+  return "Medium";
+}
+
+function buildProblemSummary(
+  text: string,
+  category: Category,
+  priority: Priority,
+) {
+  const burningSmell = has(text, [
+    "burning smell",
+    "smell of burning",
+    "burning odor",
+    "burning scent",
+  ]);
+
+  if (
+    category === "HVAC" &&
+    has(text, [
+      "air conditioner",
+      "air conditioning",
+      "cooling",
+      "not cooling",
+    ]) &&
+    burningSmell
+  ) {
+    return "Reported HVAC cooling failure with a burning smell coming from the unit. Treat as a high-priority safety concern; the exact cause cannot be confirmed without an on-site inspection.";
+  }
+
+  if (
+    category === "HVAC" &&
+    has(text, [
+      "air conditioner",
+      "air conditioning",
+      "cooling",
+      "not cooling",
+    ])
+  ) {
+    return "Possible air conditioning cooling-system issue. The exact cause cannot be confirmed without an inspection. Requires inspection.";
+  }
+
+  if (category === "Electrical") {
+    if (
+      has(text, [
+        "spark",
+        "sparks",
+        "sparking",
+      ])
+    ) {
+      return "Reported electrical sparking. This may represent an immediate electrical safety hazard and requires prompt professional inspection.";
+    }
+
+    if (
+      has(text, [
+        "burning smell",
+        "burning odor",
+      ])
+    ) {
+      return "Reported possible electrical overheating or burning odor. The exact source cannot be confirmed without an on-site inspection.";
+    }
+
+    return "Possible electrical system issue requiring inspection by a qualified electrician.";
+  }
+
+  if (category === "Plumbing") {
+    return "Possible plumbing issue requiring inspection to determine the source and extent of the problem.";
+  }
+
+  if (category === "Appliance") {
+    return "Possible appliance malfunction requiring inspection by an appliance technician.";
+  }
+
+  if (category === "Structural") {
+    return "Possible building or structural maintenance issue requiring inspection.";
+  }
+
+  if (category === "Pest") {
+    return "Possible pest infestation requiring assessment and appropriate pest-control treatment.";
+  }
+
+  if (priority === "Critical") {
+    return "Reported immediate emergency condition. Treat as an urgent safety situation; the exact cause cannot be confirmed without an on-site inspection.";
+  }
+
+  return "Maintenance issue reported. The exact cause cannot be confirmed without an on-site inspection.";
+}
+
+function buildRecommendedAction(
+  category: Category,
+  priority: Priority,
+  text: string,
+) {
+  const burningSmell = has(text, [
+    "burning smell",
+    "smell of burning",
+    "burning odor",
+    "burning scent",
+  ]);
+
+  if (priority === "Critical") {
+    return "Escalate immediately and contact appropriate emergency services when necessary.";
+  }
+
+  if (
+    priority === "High" &&
+    burningSmell &&
+    category === "HVAC"
+  ) {
+    return "Stop using the HVAC unit if it is safe to do so, keep occupants away from the equipment, and dispatch an HVAC technician for urgent inspection. Escalate to emergency services if smoke, fire, or another immediate hazard develops.";
+  }
+
+  if (
+    priority === "High" &&
+    category === "Electrical"
+  ) {
+    return "Treat as an urgent electrical safety issue and dispatch a qualified electrician for prompt inspection. If there is active smoke, fire, or electric shock, escalate immediately.";
+  }
+
+  if (priority === "High") {
+    return `Assign a ${technicianRoleFor(category)} for urgent inspection and corrective action.`;
+  }
+
+  if (category === "HVAC") {
+    return "Assign an HVAC technician to inspect the cooling or heating system.";
+  }
+
+  if (category === "Plumbing") {
+    return "Assign a licensed plumber to inspect the plumbing system and identify the source of the issue.";
+  }
+
+  if (category === "Electrical") {
+    return "Assign a licensed electrician to inspect the electrical system.";
+  }
+
+  if (category === "Appliance") {
+    return "Assign an appliance technician to inspect the appliance.";
+  }
+
+  if (category === "Structural") {
+    return "Assign qualified maintenance personnel or a contractor to inspect the affected area.";
+  }
+
+  if (category === "Pest") {
+    return "Assign a pest control technician to inspect the affected area.";
+  }
+
+  return "Assign a general maintenance technician to inspect the reported issue.";
+}
+
+function buildSafetyAssessment(
+  priority: Priority,
+  category: Category,
+  text: string,
+) {
+  if (priority === "Critical") {
+    return "Immediate safety hazard indicated. Escalate without delay and follow emergency procedures when applicable.";
+  }
+
+  if (
+    priority === "High" &&
+    has(text, [
+      "burning smell",
+      "smell of burning",
+      "burning odor",
+      "burning scent",
+    ])
+  ) {
+    if (category === "HVAC") {
+      return "Potential immediate safety hazard indicated by the burning smell from the HVAC unit. The equipment should be inspected urgently.";
+    }
+
+    if (category === "Electrical") {
+      return "Potential electrical safety hazard indicated by the burning smell. Avoid unsafe contact and arrange urgent inspection by a qualified electrician.";
+    }
+
+    return "Potential safety hazard indicated by the reported burning smell. Urgent professional inspection is recommended.";
+  }
+
+  if (priority === "High") {
+    return "Elevated safety or property-damage risk is indicated by the reported symptoms. Prompt professional inspection is recommended.";
+  }
+
+  if (priority === "Low") {
+    return "No immediate safety hazard is indicated by the information provided.";
+  }
+
+  return "No immediate safety hazard is indicated by the information provided.";
+}
+
+function buildFollowUpQuestions(
+  category: Category,
+  text: string,
+): string[] {
+  if (category === "HVAC") {
+    const questions = [
+      "Is the system still running?",
+      "Is water leaking?",
+      "Is there any burning smell?",
+    ];
+
+    if (
+      has(text, [
+        "burning smell",
+        "smell of burning",
+        "burning odor",
+      ])
+    ) {
+      return [
+        "Has the HVAC unit been turned off?",
+        "Is there any visible smoke or fire?",
+        "Is the burning smell getting stronger?",
+      ];
+    }
+
+    return questions;
+  }
+
+  if (category === "Electrical") {
+    return [
+      "Are there sparks or visible smoke?",
+      "Is the affected equipment still powered?",
+      "Has the breaker tripped?",
+    ];
+  }
+
+  if (category === "Plumbing") {
+    return [
+      "Is the water leak still active?",
+      "How much water is leaking?",
+      "Can the water supply be safely shut off?",
+    ];
+  }
+
+  if (category === "Appliance") {
+    return [
+      "Is the appliance still running?",
+      "Is there any unusual noise or smell?",
+      "Does the appliance have power?",
+    ];
+  }
+
+  if (category === "Structural") {
+    return [
+      "Is the affected area still usable?",
+      "Is there visible damage or movement?",
+      "Is there any water intrusion?",
+    ];
+  }
+
+  if (category === "Pest") {
+    return [
+      "Where were the pests observed?",
+      "How many were seen?",
+      "Are there signs of an active infestation?",
+    ];
+  }
+
+  return [
+    "Is the issue still occurring?",
+    "When did the problem start?",
+    "Has anything been done to resolve it?",
+  ];
 }
 
 export function analyzeMaintenanceRequest(input: {
@@ -458,108 +1013,103 @@ export function analyzeMaintenanceRequest(input: {
   selectedCategory?: Category | "";
   selectedPriority?: Priority | "";
 }): Analysis {
-  const text = normalize(input.description || "");
-
-  const selectedCategory =
-    (input.selectedCategory || "") as Category | "";
-
-  const selectedPriority =
-    (input.selectedPriority || "") as Priority | "";
+  const text = normalize(input.description);
 
   const detected = detectCategory(text);
 
-  let category: Category;
-
-  if (selectedCategory && selectedCategory !== "Other") {
-    const selectedSupported =
-      countMatches(
-        text,
-        KEYWORDS[
-          selectedCategory as Exclude<Category, "Other">
-        ],
-      ) > 0;
-
-    category =
-      !selectedSupported &&
-      detected.category &&
-      detected.strength >= 4
-        ? detected.category
-        : selectedCategory;
-  } else {
-    category =
-      detected.category ??
-      (selectedCategory || "Other");
-  }
+  /*
+   * Use the user's selected category when provided.
+   * Otherwise use the classifier.
+   */
+  const category: Category =
+    input.selectedCategory ||
+    detected.category ||
+    "Other";
 
   /*
-   * Safety combination:
+   * Priority is calculated from the description.
    *
-   * Water + electrical equipment is automatically High.
+   * Safety signals have precedence over ordinary
+   * maintenance symptoms.
    */
-  const waterNearElectric =
-    has(text, WATER_TERMS) &&
-    has(text, ELECTRIC_PROXIMITY_TERMS);
-
-  const isCritical = has(text, CRITICAL_TERMS);
-
-  const isHigh =
-    has(text, HIGH_TERMS) ||
-    waterNearElectric;
-
-  let riskLevel: RiskLevel;
-
-  if (isCritical) {
-    riskLevel = "Critical";
-  } else if (isHigh) {
-    riskLevel = "High";
-  } else if (
-    has(text, LOW_TERMS) &&
-    !has(text, WATER_TERMS)
-  ) {
-    riskLevel = "Low";
-  } else {
-    riskLevel = "Medium";
-  }
+  const detectedPriority = detectPriority(
+    text,
+    category,
+  );
 
   /*
-   * User-selected priority may raise priority,
-   * but cannot create Critical by itself.
+   * Do not allow a manually selected lower priority
+   * to hide an explicit safety emergency.
+   *
+   * For example:
+   * selectedPriority = Medium
+   * description = "burning smell"
+   * result = High
    */
-  let priority: Priority = riskLevel;
+  let priority: Priority = detectedPriority;
 
   if (
-    selectedPriority &&
-    selectedPriority !== "Critical" &&
-    PRIORITIES.indexOf(selectedPriority) >
-      PRIORITIES.indexOf(priority)
+    detectedPriority === "Critical" ||
+    detectedPriority === "High"
   ) {
-    priority = selectedPriority;
-    riskLevel = priority;
+    priority = detectedPriority;
+  } else if (input.selectedPriority) {
+    priority = input.selectedPriority;
   }
 
-  const problemSummary = buildSummary(
+  const riskLevel: RiskLevel = priority;
+
+  const problemSummary = buildProblemSummary(
     text,
     category,
-    riskLevel,
+    priority,
   );
 
-  const recommendedAction = buildAction(
-    category,
-    riskLevel,
-    waterNearElectric,
-  );
+  const recommendedAction =
+    buildRecommendedAction(
+      category,
+      priority,
+      text,
+    );
+
+  const technician =
+    technicianRoleFor(category);
 
   const followUpQuestions =
-    buildQuestions(category);
+    buildFollowUpQuestions(
+      category,
+      text,
+    );
 
   const safetyAssessment =
-    buildSafety(riskLevel);
+    buildSafetyAssessment(
+      priority,
+      category,
+      text,
+    );
 
-  const confidence = buildConfidence(
-    text,
-    detected,
-    selectedCategory,
-    riskLevel,
+  /*
+   * Confidence is deterministic.
+   */
+  let confidence = 0.78;
+
+  if (detected.category === category) {
+    confidence += 0.08;
+  }
+
+  if (detected.strength >= 10) {
+    confidence += 0.07;
+  }
+
+  if (priority === "Critical") {
+    confidence = Math.max(confidence, 0.95);
+  } else if (priority === "High") {
+    confidence = Math.max(confidence, 0.91);
+  }
+
+  confidence = Math.min(
+    0.99,
+    Number(confidence.toFixed(2)),
   );
 
   return {
@@ -568,308 +1118,33 @@ export function analyzeMaintenanceRequest(input: {
     riskLevel,
     problemSummary,
     recommendedAction,
-    technician:
-      TECHNICIAN_BY_CATEGORY[category],
+    technician,
     followUpQuestions,
     safetyAssessment,
     confidence,
   };
 }
 
-function subjectFor(
-  text: string,
-  category: Category,
-): string {
-  const subjects: [string, string][] = [
-    ["refrigerator", "refrigerator"],
-    ["fridge", "refrigerator"],
-    ["freezer", "freezer"],
-    ["dishwasher", "dishwasher"],
-    ["washing machine", "washing machine"],
-    ["washer", "washing machine"],
-    ["dryer", "dryer"],
-    ["oven", "oven"],
-    ["stove", "stove"],
-    ["microwave", "microwave"],
-
-    ["air conditioner", "air conditioning system"],
-    ["air conditioning", "air conditioning system"],
-    ["hvac", "HVAC system"],
-    ["furnace", "furnace"],
-    ["heater", "heating system"],
-    ["heating", "heating system"],
-    ["thermostat", "thermostat"],
-    ["heat pump", "heat pump"],
-    ["condenser", "condenser"],
-    ["evaporator", "evaporator"],
-    ["duct", "ductwork"],
-
-    ["toilet", "toilet"],
-    ["sink", "sink"],
-    ["faucet", "faucet"],
-    ["shower", "shower"],
-    ["drain", "drain"],
-    ["pipe", "pipe"],
-
-    ["panel", "electrical panel"],
-    ["outlet", "electrical outlet"],
-    ["socket", "electrical socket"],
-    ["breaker", "circuit breaker"],
-    ["wiring", "wiring"],
-    ["wire", "wire"],
-
-    ["ceiling", "ceiling"],
-    ["roof", "roof"],
-    ["window", "window"],
-    ["door", "door"],
-    ["lock", "lock"],
-    ["floor", "floor"],
-    ["wall", "wall"],
-  ];
-
-  for (const [term, label] of subjects) {
-    if (text.includes(term)) {
-      return label;
-    }
-  }
-
-  return `${category.toLowerCase()} system`;
-}
-
-function buildSummary(
-  text: string,
-  category: Category,
-  risk: RiskLevel,
-) {
-  const subject = subjectFor(text, category);
-
-  if (risk === "Critical") {
-    return `Reported immediate emergency involving the ${subject}. Treat as an urgent safety situation; the exact cause cannot be confirmed without an on-site inspection.`;
-  }
-
-  if (risk === "High") {
-    return `Possible ${category.toLowerCase()} fault involving the ${subject} with a potential safety or property risk. Likely requires prompt inspection by a qualified professional.`;
-  }
-
-  const symptom =
-    text.includes("not cooling")
-      ? "cooling-system issue"
-      : text.includes("not heating")
-        ? "heating-system issue"
-        : text.includes("not starting")
-          ? "start-up or power-supply issue"
-          : text.includes("not draining")
-            ? "drainage issue"
-            : text.includes("leak")
-              ? "leak"
-              : "functional fault";
-
-  return `Possible ${subject} ${symptom}. The exact cause cannot be confirmed without an inspection. Requires inspection.`;
-}
-
-function buildAction(
-  category: Category,
-  risk: RiskLevel,
-  waterNearElectric: boolean,
-) {
-  if (risk === "Critical") {
-    return "Escalate immediately and contact appropriate emergency services when necessary.";
-  }
-
-  if (waterNearElectric) {
-    return "Stop using the appliance and keep away from the affected electrical area. Have a qualified technician inspect it.";
-  }
-
-  if (
-    risk === "High" &&
-    category === "Electrical"
-  ) {
-    return "Stop using the affected equipment/circuit and arrange qualified professional inspection.";
-  }
-
-  if (
-    risk === "High" &&
-    category === "HVAC"
-  ) {
-    return "Stop using the affected HVAC equipment if it is producing smoke, sparks, burning odor, or other unsafe symptoms. Arrange prompt inspection by a qualified HVAC technician.";
-  }
-
-  switch (category) {
-    case "Appliance":
-      return "Assign an appliance technician for inspection.";
-
-    case "HVAC":
-      return "Assign an HVAC technician to inspect the cooling system.";
-
-    case "Plumbing":
-      return "Assign a plumber to inspect the leak.";
-
-    case "Electrical":
-      return "Assign a qualified electrician to inspect the affected circuit.";
-
-    case "Structural":
-      return "Assign general maintenance to inspect the affected structure.";
-
-    case "Pest":
-      return "Schedule a pest control technician for an on-site treatment assessment.";
-
-    default:
-      return "Assign a maintenance technician for an on-site inspection.";
-  }
-}
-
-function buildQuestions(
-  category: Category,
-): string[] {
-  switch (category) {
-    case "Appliance":
-      return [
-        "Is the appliance completely unusable?",
-        "Is there any smoke or burning smell?",
-        "Is there any water leaking?",
-      ];
-
-    case "HVAC":
-      return [
-        "Is the system still running?",
-        "Is water leaking?",
-        "Is there any burning smell?",
-      ];
-
-    case "Plumbing":
-      return [
-        "Is water still actively leaking?",
-        "Where exactly is the leak?",
-        "Is the affected area near electrical equipment?",
-      ];
-
-    case "Electrical":
-      return [
-        "Is there smoke or a burning smell?",
-        "Did the breaker trip?",
-        "Are sparks visible?",
-      ];
-
-    case "Structural":
-      return [
-        "Is the affected area unsafe to use?",
-        "Is water entering the unit?",
-        "When did the damage first appear?",
-      ];
-
-    case "Pest":
-      return [
-        "How many sightings have occurred?",
-        "Which rooms are affected?",
-        "Has any treatment been applied before?",
-      ];
-
-    default:
-      return [
-        "Can you describe the issue in more detail?",
-        "When did the issue start?",
-        "Is the unit still usable?",
-      ];
-  }
-}
-
-function buildSafety(
-  risk: RiskLevel,
-) {
-  if (risk === "Critical") {
-    return "This appears to be an immediate safety emergency. Escalate immediately and contact appropriate emergency services when necessary.";
-  }
-
-  if (risk === "High") {
-    return "This issue may present a safety or property risk and should be inspected promptly by a qualified professional.";
-  }
-
-  return "No immediate safety hazard is indicated by the information provided.";
-}
-
-function buildConfidence(
-  text: string,
-  detected: {
-    category: Category | null;
-    strength: number;
-  },
-  selectedCategory: Category | "",
-  risk: RiskLevel,
-) {
-  const words = text
-    .trim()
-    .split(" ")
-    .filter(Boolean).length;
-
-  let score = 60;
-
-  if (detected.category) {
-    score += 12;
-  }
-
-  if (detected.strength >= 4) {
-    score += 6;
-  }
-
-  if (
-    selectedCategory &&
-    detected.category === selectedCategory
-  ) {
-    score += 10;
-  } else if (selectedCategory) {
-    score += 4;
-  }
-
-  if (words >= 8) {
-    score += 6;
-  }
-
-  if (words >= 16) {
-    score += 4;
-  }
-
-  if (words < 4) {
-    score -= 18;
-  }
-
-  if (
-    risk === "Critical" ||
-    risk === "High"
-  ) {
-    score += 4;
-  }
-
-  return Math.max(
-    35,
-    Math.min(98, score),
-  );
-}
-
-export function suggestedTenantResponse(opts: {
+export function suggestedTenantResponse(input: {
   tenant: string;
   analysis: Analysis;
 }) {
-  const first =
-    (opts.tenant || "there")
-      .trim()
-      .split(" ")[0];
+  const {
+    tenant,
+    analysis,
+  } = input;
 
-  const label = `${opts.analysis.priority.toLowerCase()}-priority ${opts.analysis.category.toLowerCase()} issue`;
+  if (analysis.priority === "Critical") {
+    return `Hi ${tenant}, thank you for reporting this issue. We are treating it as an urgent safety matter and escalating it immediately. Please avoid the affected area or equipment if it is unsafe to approach, and contact emergency services if there is an immediate danger.`;
+  }
 
-  const closing =
-    opts.analysis.riskLevel === "Critical"
-      ? "This has been escalated as an emergency and is being handled immediately."
-      : opts.analysis.riskLevel === "High"
-        ? "This has been flagged for prompt inspection by a qualified professional."
-        : `${/^[aeiou]/i.test(opts.analysis.technician) ? "An" : "A"} ${opts.analysis.technician.toLowerCase()} will be assigned to inspect it.`;
+  if (analysis.priority === "High") {
+    return `Hi ${tenant}, thank you for reporting this issue. We have identified it as a high-priority maintenance concern and will arrange an urgent inspection by a ${analysis.technician}. Please avoid using the affected equipment if doing so could be unsafe.`;
+  }
 
-  return `Hi ${first},
+  if (analysis.priority === "Medium") {
+    return `Hi ${tenant}, thank you for reporting this issue. We have logged your maintenance request and will arrange for a ${analysis.technician} to inspect it. We will provide an update once the inspection is scheduled.`;
+  }
 
-Thank you for reporting the maintenance issue.
-
-We've reviewed your request and classified it as a ${label}. ${closing}
-
-We'll keep you updated.
-
-Maintenance Team`;
+  return `Hi ${tenant}, thank you for reporting this issue. We have logged your maintenance request and will arrange for a ${analysis.technician} to review it.`;
 }
