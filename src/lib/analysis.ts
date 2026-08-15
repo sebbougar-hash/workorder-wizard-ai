@@ -553,45 +553,32 @@ const LOW_TERMS = [
   "minor",
 ];
 
-function detectCategory(text: string): {
-  category: Category | null;
-  strength: number;
-} {
-  let bestCategory: Category | null = null;
-  let bestScore = 0;
+const applianceEvidence = has(text, [
+  "refrigerator",
+  "fridge",
+  "freezer",
+  "dishwasher",
+  "washing machine",
+  "washer",
+  "dryer",
+  "oven",
+  "stove",
+  "microwave",
+]);
 
-  const categories = Object.keys(
-    KEYWORDS,
-  ) as Exclude<Category, "Other">[];
+const applianceBurningSmell = has(text, [
+  "burning smell",
+  "smell of burning",
+  "burning odor",
+  "burning scent",
+]);
 
-  for (const category of categories) {
-    let score =
-      countMatches(
-        text,
-        KEYWORDS[category],
-      ) * 2;
-
-    for (const combination of CATEGORY_COMBINATIONS[
-      category
-    ]) {
-      const matches =
-        combination.terms.every(
-          (term) =>
-            text.includes(term) &&
-            !negated(text, term),
-        );
-
-      if (matches) {
-        score += combination.weight;
-      }
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestCategory = category;
-    }
-  }
-
+if (applianceEvidence && applianceBurningSmell) {
+  return {
+    category: "Appliance",
+    strength: Math.max(bestScore, 20),
+  };
+}
   /*
    * HVAC + burning smell should remain HVAC
    * unless the user explicitly identifies an
