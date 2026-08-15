@@ -444,7 +444,8 @@ function negated(text: string, term: string) {
     if (index === -1) {
       return false;
     }
-
+  }
+}
     const before = text
       .slice(Math.max(0, index - 40), index)
       .trim();
