@@ -1,3 +1,11 @@
+/* =========================================================
+   maintenanceAnalysis.ts
+   Bilingual Maintenance Analysis Engine
+   English + French
+   ========================================================= */
+
+export type Language = "en" | "fr";
+
 export type Category =
   | "HVAC"
   | "Plumbing"
@@ -55,6 +63,7 @@ export const PROPERTIES = [
 ];
 
 export interface Analysis {
+  language: Language;
   category: Category;
   priority: Priority;
   riskLevel: RiskLevel;
@@ -67,35 +76,127 @@ export interface Analysis {
 }
 
 /* =========================================================
-   CATEGORY KEYWORDS
+   LANGUAGE DETECTION
    ========================================================= */
 
-const KEYWORDS: Record<
-  Exclude<Category, "Other">,
-  string[]
-> = {
+const FRENCH_MARKERS = [
+  "le ",
+  "la ",
+  "les ",
+  "un ",
+  "une ",
+  "des ",
+  "du ",
+  "de ",
+  "dans ",
+  "avec ",
+  "pour ",
+  "mon ",
+  "ma ",
+  "mes ",
+  "est ",
+  "sont ",
+  "j'ai",
+  "je ",
+  "il ",
+  "elle ",
+  "nous ",
+  "vous ",
+  "problème",
+  "probleme",
+  "panne",
+  "fuite",
+  "prise",
+  "mur",
+  "plafond",
+  "chauffage",
+  "climatisation",
+  "eau ",
+  "électricité",
+  "electricite",
+  "toilettes",
+  "robinet",
+];
+
+function detectLanguage(text: string): Language {
+  const lower = ` ${text.toLowerCase()} `;
+
+  let frenchScore = 0;
+
+  for (const marker of FRENCH_MARKERS) {
+    if (lower.includes(marker)) {
+      frenchScore++;
+    }
+  }
+
+  /*
+   * French-specific characters are useful signals,
+   * but not sufficient by themselves.
+   */
+  if (/[àâçéèêëîïôùûüÿœ]/i.test(text)) {
+    frenchScore += 3;
+  }
+
+  return frenchScore >= 2 ? "fr" : "en";
+}
+
+/* =========================================================
+   NORMALIZATION
+   ========================================================= */
+
+function normalize(text: string): string {
+  return ` ${text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "'")
+    .replace(/[^\w\s'-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()} `;
+}
+
+/* =========================================================
+   MULTILINGUAL TERM GROUPS
+   ========================================================= */
+
+const TERMS = {
   HVAC: [
-    "hvac",
     "air conditioner",
     "air conditioning",
-    "a c",
-    "ac unit",
+    "hvac",
     "furnace",
     "heater",
     "heating",
     "thermostat",
-    "heat pump",
     "cooling system",
+    "cooling",
+    "not cooling",
+    "not heating",
+    "heat pump",
     "refrigerant",
     "condenser",
     "evaporator",
     "duct",
-    "ductwork",
     "airflow",
     "air flow",
-    "vent",
-    "vents",
-    "ventilation",
+
+    "climatisation",
+    "clim",
+    "climatiseur",
+    "climatiseur",
+    "chauffage",
+    "chaudiere",
+    "chaudière",
+    "radiateur",
+    "thermostat",
+    "pompe a chaleur",
+    "pompe à chaleur",
+    "ne refroidit pas",
+    "ne chauffe pas",
+    "ne chauffe plus",
+    "ne refroidit plus",
+    "air froid",
+    "air chaud",
   ],
 
   Plumbing: [
@@ -104,25 +205,53 @@ const KEYWORDS: Record<
     "sink",
     "toilet",
     "faucet",
-    "tap",
     "pipe",
     "pipes",
     "drain",
     "shower",
     "bathtub",
-    "bath tub",
     "water pressure",
     "water leak",
     "water leakage",
     "leaking water",
-    "water dripping",
-    "dripping water",
     "sewage",
     "sewer",
-    "clog",
-    "clogged",
-    "blocked drain",
-    "blocked toilet",
+    "clogged drain",
+    "not draining",
+
+    "plomberie",
+    "plombier",
+    "evier",
+    "évier",
+    "lavabo",
+    "toilettes",
+    "toilette",
+    "wc",
+    "robinet",
+    "tuyau",
+    "tuyaux",
+    "canalisation",
+    "canalisations",
+    "evacuation",
+    "évacuation",
+    "douche",
+    "baignoire",
+    "pression d'eau",
+    "pression d eau",
+    "fuite d'eau",
+    "fuite d eau",
+    "fuite",
+    "eau qui fuit",
+    "eaux usees",
+    "eaux usées",
+    "egout",
+    "égout",
+    "bouche",
+    "bouché",
+    "bouchee",
+    "bouchée",
+    "ne s'evacue pas",
+    "ne s'evacue",
   ],
 
   Electrical: [
@@ -137,30 +266,64 @@ const KEYWORDS: Record<
     "breakers",
     "circuit breaker",
     "electrical panel",
-    "panel",
     "wiring",
     "wire",
     "wires",
     "fuse",
     "fuse box",
     "short circuit",
-    "power outage",
-    "power",
-    "electric shock",
     "electrical shock",
+    "electric shock",
     "electrocution",
     "electrocuted",
+    "exposed wiring",
+    "exposed wire",
+    "live wire",
+    "live wiring",
     "sparking",
     "sparks",
     "spark",
-    "live wire",
-    "live wiring",
-    "exposed wire",
-    "exposed wiring",
-    "light switch",
-    "switch",
-    "lights",
-    "light",
+    "power outage",
+    "no power",
+
+    "electrique",
+    "électrique",
+    "electricien",
+    "électricien",
+    "electricite",
+    "électricité",
+    "prise",
+    "prises",
+    "prise electrique",
+    "prise électrique",
+    "interrupteur",
+    "disjoncteur",
+    "disjoncteurs",
+    "tableau electrique",
+    "tableau électrique",
+    "cablage",
+    "câblage",
+    "cable",
+    "câble",
+    "fil",
+    "fils",
+    "fusible",
+    "boite a fusibles",
+    "boîte à fusibles",
+    "court circuit",
+    "court-circuit",
+    "choc electrique",
+    "choc électrique",
+    "electrocution",
+    "etincelle",
+    "étincelle",
+    "etincelles",
+    "étincelles",
+    "fume",
+    "fumee",
+    "fumée",
+    "plus de courant",
+    "pas de courant",
   ],
 
   Appliance: [
@@ -171,14 +334,35 @@ const KEYWORDS: Record<
     "washing machine",
     "washer",
     "dryer",
-    "tumble dryer",
     "oven",
     "stove",
-    "cooktop",
     "microwave",
-    "garbage disposal",
-    "disposal",
-    "water heater",
+    "coffee maker",
+    "coffee machine",
+
+    "refrigerateur",
+    "réfrigérateur",
+    "frigo",
+    "congelateur",
+    "congélateur",
+    "lave vaisselle",
+    "lave-vaisselle",
+    "machine a laver",
+    "machine à laver",
+    "lave linge",
+    "lave-linge",
+    "seche linge",
+    "sèche-linge",
+    "seche cheveux",
+    "sèche-cheveux",
+    "four",
+    "cuisiniere",
+    "cuisinière",
+    "micro onde",
+    "micro-ondes",
+    "machine a cafe",
+    "machine à café",
+    "cafetière",
   ],
 
   Structural: [
@@ -191,847 +375,323 @@ const KEYWORDS: Record<
     "window",
     "frame",
     "lock",
-    "stairs",
-    "stair",
-    "cabinet",
-    "closet",
-    "baseboard",
-    "flooring",
     "crack",
     "broken door",
     "broken window",
+    "sagging ceiling",
+    "damaged wall",
+
+    "structurel",
+    "structurelle",
+    "toit",
+    "plafond",
+    "mur",
+    "sol",
+    "porte",
+    "fenetre",
+    "fenêtre",
+    "cadre",
+    "serrure",
+    "fissure",
+    "porte cassee",
+    "porte cassée",
+    "fenetre cassee",
+    "fenêtre cassée",
+    "plafond qui s'affaisse",
+    "mur endommage",
+    "mur endommagé",
   ],
 
   Pest: [
     "cockroach",
-    "cockroaches",
     "roach",
-    "roaches",
     "rat",
-    "rats",
     "mouse",
-    "mice",
     "rodent",
-    "rodents",
-    "bed bug",
     "bed bugs",
     "bedbug",
-    "bedbugs",
     "termite",
-    "termites",
-    "ant",
     "ants",
-    "insect",
     "insects",
     "pest",
-    "pests",
+    "droppings",
+    "infestation",
+
+    "cafard",
+    "cafards",
+    "blatte",
+    "blattes",
+    "rat",
+    "rats",
+    "souris",
+    "rongeur",
+    "rongeurs",
+    "punaises",
+    "punaise de lit",
+    "termites",
+    "fourmis",
+    "insecte",
+    "insectes",
+    "nuisible",
+    "nuisibles",
+    "excrements",
+    "excréments",
     "infestation",
   ],
 };
 
 /* =========================================================
-   NATURAL-LANGUAGE PATTERNS
-   These are phrases a normal tenant is likely to use.
+   STRONG CONTEXTUAL COMBINATIONS
    ========================================================= */
 
-const NATURAL_PATTERNS: Record<
-  Exclude<Category, "Other">,
-  { phrase: string; weight: number }[]
-> = {
-  HVAC: [
-    {
-      phrase: "apartment is getting hot",
-      weight: 16,
-    },
-    {
-      phrase: "apartment is too hot",
-      weight: 16,
-    },
-    {
-      phrase: "apartment is extremely hot",
-      weight: 18,
-    },
-    {
-      phrase: "apartment is very hot",
-      weight: 16,
-    },
-    {
-      phrase: "room is getting hot",
-      weight: 16,
-    },
-    {
-      phrase: "room is too hot",
-      weight: 16,
-    },
-    {
-      phrase: "room is extremely hot",
-      weight: 18,
-    },
-    {
-      phrase: "room is very hot",
-      weight: 16,
-    },
-    {
-      phrase: "house is getting hot",
-      weight: 16,
-    },
-    {
-      phrase: "house is too hot",
-      weight: 16,
-    },
-    {
-      phrase: "place is getting hot",
-      weight: 15,
-    },
-    {
-      phrase: "place is too hot",
-      weight: 15,
-    },
-    {
-      phrase: "too hot inside",
-      weight: 14,
-    },
-    {
-      phrase: "very hot inside",
-      weight: 14,
-    },
-    {
-      phrase: "extremely hot inside",
-      weight: 16,
-    },
-    {
-      phrase: "hot inside",
-      weight: 12,
-    },
-    {
-      phrase: "not cooling",
-      weight: 12,
-    },
-    {
-      phrase: "doesn't cool",
-      weight: 12,
-    },
-    {
-      phrase: "does not cool",
-      weight: 12,
-    },
-    {
-      phrase: "can't cool",
-      weight: 14,
-    },
-    {
-      phrase: "cannot cool",
-      weight: 14,
-    },
-    {
-      phrase: "can't cool the apartment",
-      weight: 18,
-    },
-    {
-      phrase: "cannot cool the apartment",
-      weight: 18,
-    },
-    {
-      phrase: "can't cool the room",
-      weight: 18,
-    },
-    {
-      phrase: "cannot cool the room",
-      weight: 18,
-    },
-    {
-      phrase: "air is not cold",
-      weight: 14,
-    },
-    {
-      phrase: "air isn't cold",
-      weight: 14,
-    },
-    {
-      phrase: "air does not feel cold",
-      weight: 16,
-    },
-    {
-      phrase: "air doesn't feel cold",
-      weight: 16,
-    },
-    {
-      phrase: "warm air from the vents",
-      weight: 18,
-    },
-    {
-      phrase: "warm air coming from the vents",
-      weight: 20,
-    },
-    {
-      phrase: "air coming out of the vents",
-      weight: 10,
-    },
-    {
-      phrase: "air from the vents",
-      weight: 8,
-    },
-    {
-      phrase: "vents are blowing",
-      weight: 10,
-    },
-    {
-      phrase: "vents are blowing warm air",
-      weight: 18,
-    },
-    {
-      phrase: "vents feel warm",
-      weight: 16,
-    },
-    {
-      phrase: "temperature doesn't change",
-      weight: 14,
-    },
-    {
-      phrase: "temperature does not change",
-      weight: 14,
-    },
-    {
-      phrase: "changing the temperature",
-      weight: 8,
-    },
-    {
-      phrase: "wall control",
-      weight: 10,
-    },
-    {
-      phrase: "sweating at night",
-      weight: 10,
-    },
-    {
-      phrase: "hot at night",
-      weight: 10,
-    },
-    {
-      phrase: "freezing inside",
-      weight: 12,
-    },
-    {
-      phrase: "too cold inside",
-      weight: 12,
-    },
-    {
-      phrase: "room won't warm up",
-      weight: 16,
-    },
-    {
-      phrase: "room will not warm up",
-      weight: 16,
-    },
-    {
-      phrase: "house won't warm up",
-      weight: 16,
-    },
-    {
-      phrase: "house will not warm up",
-      weight: 16,
-    },
-  ],
-
-  Plumbing: [
-    {
-      phrase: "water is leaking",
-      weight: 14,
-    },
-    {
-      phrase: "water is dripping",
-      weight: 14,
-    },
-    {
-      phrase: "water keeps dripping",
-      weight: 16,
-    },
-    {
-      phrase: "water is coming from",
-      weight: 10,
-    },
-    {
-      phrase: "water on the floor",
-      weight: 16,
-    },
-    {
-      phrase: "water on my floor",
-      weight: 16,
-    },
-    {
-      phrase: "floor is wet",
-      weight: 12,
-    },
-    {
-      phrase: "water under the sink",
-      weight: 18,
-    },
-    {
-      phrase: "water under my sink",
-      weight: 18,
-    },
-    {
-      phrase: "toilet is clogged",
-      weight: 18,
-    },
-    {
-      phrase: "toilet won't flush",
-      weight: 18,
-    },
-    {
-      phrase: "toilet will not flush",
-      weight: 18,
-    },
-    {
-      phrase: "sink won't drain",
-      weight: 18,
-    },
-    {
-      phrase: "sink will not drain",
-      weight: 18,
-    },
-    {
-      phrase: "shower has low pressure",
-      weight: 16,
-    },
-    {
-      phrase: "low water pressure",
-      weight: 16,
-    },
-    {
-      phrase: "no water pressure",
-      weight: 16,
-    },
-    {
-      phrase: "water pressure is low",
-      weight: 16,
-    },
-    {
-      phrase: "drain is clogged",
-      weight: 18,
-    },
-    {
-      phrase: "drain is blocked",
-      weight: 18,
-    },
-    {
-      phrase: "there is a leak",
-      weight: 12,
-    },
-    {
-      phrase: "there's a leak",
-      weight: 12,
-    },
-  ],
-
-  Electrical: [
-    {
-      phrase: "lights don't work",
-      weight: 16,
-    },
-    {
-      phrase: "lights do not work",
-      weight: 16,
-    },
-    {
-      phrase: "lights stopped working",
-      weight: 18,
-    },
-    {
-      phrase: "light stopped working",
-      weight: 18,
-    },
-    {
-      phrase: "no power",
-      weight: 16,
-    },
-    {
-      phrase: "power is out",
-      weight: 18,
-    },
-    {
-      phrase: "power went out",
-      weight: 18,
-    },
-    {
-      phrase: "electricity is out",
-      weight: 18,
-    },
-    {
-      phrase: "electricity went out",
-      weight: 18,
-    },
-    {
-      phrase: "outlet doesn't work",
-      weight: 18,
-    },
-    {
-      phrase: "outlet does not work",
-      weight: 18,
-    },
-    {
-      phrase: "socket doesn't work",
-      weight: 18,
-    },
-    {
-      phrase: "socket does not work",
-      weight: 18,
-    },
-    {
-      phrase: "breaker keeps tripping",
-      weight: 22,
-    },
-    {
-      phrase: "breaker keeps going off",
-      weight: 20,
-    },
-    {
-      phrase: "breaker keeps shutting off",
-      weight: 20,
-    },
-    {
-      phrase: "lights are flickering",
-      weight: 18,
-    },
-    {
-      phrase: "light is flickering",
-      weight: 18,
-    },
-    {
-      phrase: "I saw sparks",
-      weight: 22,
-    },
-    {
-      phrase: "there are sparks",
-      weight: 22,
-    },
-    {
-      phrase: "something sparked",
-      weight: 20,
-    },
-    {
-      phrase: "smell of burning near the outlet",
-      weight: 24,
-    },
-    {
-      phrase: "burning smell from the outlet",
-      weight: 24,
-    },
-    {
-      phrase: "wire is exposed",
-      weight: 22,
-    },
-    {
-      phrase: "wires are exposed",
-      weight: 22,
-    },
-    {
-      phrase: "got an electric shock",
-      weight: 30,
-    },
-    {
-      phrase: "got a shock from",
-      weight: 28,
-    },
-  ],
-
-  Appliance: [
-    {
-      phrase: "fridge is not cooling",
-      weight: 22,
-    },
-    {
-      phrase: "fridge isn't cooling",
-      weight: 22,
-    },
-    {
-      phrase: "refrigerator is not cooling",
-      weight: 22,
-    },
-    {
-      phrase: "refrigerator isn't cooling",
-      weight: 22,
-    },
-    {
-      phrase: "dishwasher won't drain",
-      weight: 22,
-    },
-    {
-      phrase: "dishwasher will not drain",
-      weight: 22,
-    },
-    {
-      phrase: "washing machine won't start",
-      weight: 22,
-    },
-    {
-      phrase: "washing machine will not start",
-      weight: 22,
-    },
-    {
-      phrase: "washer won't start",
-      weight: 22,
-    },
-    {
-      phrase: "dryer isn't heating",
-      weight: 22,
-    },
-    {
-      phrase: "dryer is not heating",
-      weight: 22,
-    },
-    {
-      phrase: "oven isn't heating",
-      weight: 22,
-    },
-    {
-      phrase: "oven is not heating",
-      weight: 22,
-    },
-    {
-      phrase: "appliance stopped working",
-      weight: 18,
-    },
-    {
-      phrase: "appliance isn't working",
-      weight: 18,
-    },
-    {
-      phrase: "appliance is not working",
-      weight: 18,
-    },
-  ],
-
-  Structural: [
-    {
-      phrase: "door won't close",
-      weight: 20,
-    },
-    {
-      phrase: "door will not close",
-      weight: 20,
-    },
-    {
-      phrase: "door won't lock",
-      weight: 20,
-    },
-    {
-      phrase: "door will not lock",
-      weight: 20,
-    },
-    {
-      phrase: "window won't close",
-      weight: 20,
-    },
-    {
-      phrase: "window will not close",
-      weight: 20,
-    },
-    {
-      phrase: "window is broken",
-      weight: 18,
-    },
-    {
-      phrase: "crack in the wall",
-      weight: 20,
-    },
-    {
-      phrase: "crack on the wall",
-      weight: 20,
-    },
-    {
-      phrase: "crack in the ceiling",
-      weight: 20,
-    },
-    {
-      phrase: "ceiling is damaged",
-      weight: 18,
-    },
-    {
-      phrase: "water stain on the ceiling",
-      weight: 20,
-    },
-    {
-      phrase: "water damage on the ceiling",
-      weight: 22,
-    },
-    {
-      phrase: "floor is damaged",
-      weight: 18,
-    },
-    {
-      phrase: "floor is broken",
-      weight: 18,
-    },
-  ],
-
-  Pest: [
-    {
-      phrase: "keep seeing bugs",
-      weight: 18,
-    },
-    {
-      phrase: "keep seeing insects",
-      weight: 18,
-    },
-    {
-      phrase: "bugs in the kitchen",
-      weight: 20,
-    },
-    {
-      phrase: "bugs in my kitchen",
-      weight: 20,
-    },
-    {
-      phrase: "bugs in the bedroom",
-      weight: 20,
-    },
-    {
-      phrase: "insects in the apartment",
-      weight: 18,
-    },
-    {
-      phrase: "mice in the apartment",
-      weight: 24,
-    },
-    {
-      phrase: "mouse in the apartment",
-      weight: 24,
-    },
-    {
-      phrase: "rat in the apartment",
-      weight: 24,
-    },
-    {
-      phrase: "droppings in the kitchen",
-      weight: 22,
-    },
-    {
-      phrase: "droppings in the bedroom",
-      weight: 22,
-    },
-    {
-      phrase: "bed bugs in the bedroom",
-      weight: 26,
-    },
-    {
-      phrase: "signs of termites",
-      weight: 26,
-    },
-  ],
+type Combination = {
+  terms: string[];
+  weight: number;
 };
 
-/* =========================================================
-   CATEGORY COMBINATIONS
-   ========================================================= */
-
-const CATEGORY_COMBINATIONS: Record<
+const COMBINATIONS: Record<
   Exclude<Category, "Other">,
-  { terms: string[]; weight: number }[]
+  Combination[]
 > = {
   HVAC: [
     {
       terms: ["air conditioner", "not cooling"],
-      weight: 22,
-    },
-    {
-      terms: ["air conditioning", "not cooling"],
-      weight: 22,
-    },
-    {
-      terms: ["air conditioner", "burning smell"],
-      weight: 25,
-    },
-    {
-      terms: ["air conditioning", "burning smell"],
-      weight: 25,
-    },
-    {
-      terms: ["hvac", "burning smell"],
-      weight: 25,
-    },
-    {
-      terms: ["furnace", "burning smell"],
-      weight: 25,
-    },
-    {
-      terms: ["heater", "burning smell"],
-      weight: 25,
-    },
-    {
-      terms: ["cooling system", "burning smell"],
-      weight: 25,
-    },
-    {
-      terms: ["thermostat", "cooling"],
-      weight: 15,
-    },
-    {
-      terms: ["thermostat", "heating"],
-      weight: 15,
-    },
-    {
-      terms: ["thermostat", "temperature"],
-      weight: 14,
-    },
-    {
-      terms: ["furnace", "not heating"],
-      weight: 18,
-    },
-    {
-      terms: ["heater", "not heating"],
-      weight: 18,
-    },
-    {
-      terms: ["vents", "warm air"],
       weight: 20,
     },
     {
-      terms: ["vents", "cold air"],
-      weight: 16,
+      terms: ["air conditioning", "not cooling"],
+      weight: 20,
+    },
+    {
+      terms: ["climatiseur", "ne refroidit pas"],
+      weight: 20,
+    },
+    {
+      terms: ["climatisation", "ne refroidit pas"],
+      weight: 20,
+    },
+    {
+      terms: ["furnace", "not heating"],
+      weight: 20,
+    },
+    {
+      terms: ["heater", "not heating"],
+      weight: 20,
+    },
+    {
+      terms: ["chauffage", "ne chauffe pas"],
+      weight: 20,
+    },
+    {
+      terms: ["radiateur", "ne chauffe plus"],
+      weight: 20,
+    },
+    {
+      terms: ["thermostat", "heating"],
+      weight: 12,
+    },
+    {
+      terms: ["thermostat", "cooling"],
+      weight: 12,
+    },
+    {
+      terms: ["thermostat", "chauffage"],
+      weight: 12,
+    },
+    {
+      terms: ["thermostat", "climatisation"],
+      weight: 12,
     },
   ],
 
   Plumbing: [
     {
-      terms: ["pipe", "water leak"],
-      weight: 20,
-    },
-    {
       terms: ["sink", "water leak"],
-      weight: 20,
+      weight: 18,
     },
     {
       terms: ["toilet", "water leak"],
-      weight: 20,
+      weight: 18,
+    },
+    {
+      terms: ["pipe", "water leak"],
+      weight: 18,
     },
     {
       terms: ["faucet", "water leak"],
-      weight: 20,
+      weight: 18,
     },
     {
-      terms: ["toilet", "not flushing"],
-      weight: 20,
+      terms: ["evier", "fuite"],
+      weight: 18,
+    },
+    {
+      terms: ["lavabo", "fuite"],
+      weight: 18,
+    },
+    {
+      terms: ["toilette", "fuite"],
+      weight: 18,
+    },
+    {
+      terms: ["robinet", "fuite"],
+      weight: 18,
+    },
+    {
+      terms: ["tuyau", "fuite"],
+      weight: 18,
     },
     {
       terms: ["sink", "not draining"],
-      weight: 20,
+      weight: 18,
     },
     {
-      terms: ["shower", "low water pressure"],
-      weight: 20,
-    },
-    {
-      terms: ["water", "floor"],
-      weight: 8,
+      terms: ["evier", "bouche"],
+      weight: 18,
     },
   ],
 
   Electrical: [
     {
+      terms: ["outlet", "burning smell"],
+      weight: 30,
+    },
+    {
+      terms: ["socket", "burning smell"],
+      weight: 30,
+    },
+    {
+      terms: ["outlet", "smells like burning"],
+      weight: 30,
+    },
+    {
+      terms: ["socket", "smells like burning"],
+      weight: 30,
+    },
+    {
+      terms: ["prise", "odeur de brule"],
+      weight: 30,
+    },
+    {
+      terms: ["prise", "sent le brule"],
+      weight: 30,
+    },
+    {
+      terms: ["prise", "odeur de brûlé"],
+      weight: 30,
+    },
+    {
+      terms: ["prise", "sent le brûlé"],
+      weight: 30,
+    },
+    {
       terms: ["outlet", "sparks"],
-      weight: 25,
-    },
-    {
-      terms: ["outlet", "sparking"],
-      weight: 25,
-    },
-    {
-      terms: ["socket", "sparks"],
-      weight: 25,
+      weight: 30,
     },
     {
       terms: ["socket", "sparking"],
-      weight: 25,
+      weight: 30,
     },
     {
-      terms: ["outlet", "no power"],
-      weight: 22,
+      terms: ["prise", "etincelles"],
+      weight: 30,
     },
     {
-      terms: ["socket", "no power"],
-      weight: 22,
+      terms: ["prise", "étincelles"],
+      weight: 30,
     },
     {
       terms: ["breaker", "keeps tripping"],
-      weight: 28,
+      weight: 25,
     },
     {
-      terms: ["breaker", "trips"],
-      weight: 22,
+      terms: ["disjoncteur", "saute"],
+      weight: 25,
     },
     {
-      terms: ["burning smell", "outlet"],
-      weight: 28,
+      terms: ["electrical", "burning smell"],
+      weight: 25,
     },
     {
-      terms: ["burning smell", "socket"],
-      weight: 28,
+      terms: ["electrique", "odeur de brule"],
+      weight: 25,
     },
     {
-      terms: ["burning smell", "electrical"],
-      weight: 28,
+      terms: ["electricite", "odeur de brule"],
+      weight: 25,
     },
     {
-      terms: ["exposed wire", "electrical"],
-      weight: 28,
+      terms: ["wiring", "burning smell"],
+      weight: 25,
     },
     {
-      terms: ["exposed wiring", "electrical"],
-      weight: 28,
+      terms: ["cablage", "odeur de brule"],
+      weight: 25,
     },
     {
-      terms: ["live wire", "electrical"],
-      weight: 28,
+      terms: ["short circuit", "power"],
+      weight: 25,
     },
     {
-      terms: ["short circuit", "electrical"],
-      weight: 28,
-    },
-    {
-      terms: ["lights", "no power"],
-      weight: 20,
+      terms: ["court circuit", "courant"],
+      weight: 25,
     },
   ],
 
   Appliance: [
     {
       terms: ["refrigerator", "not cooling"],
-      weight: 24,
+      weight: 20,
     },
     {
       terms: ["fridge", "not cooling"],
-      weight: 24,
+      weight: 20,
     },
     {
       terms: ["dishwasher", "not draining"],
-      weight: 24,
+      weight: 20,
     },
     {
       terms: ["washing machine", "not starting"],
-      weight: 24,
-    },
-    {
-      terms: ["washer", "not starting"],
-      weight: 24,
+      weight: 20,
     },
     {
       terms: ["dryer", "not heating"],
-      weight: 24,
+      weight: 20,
     },
     {
       terms: ["oven", "not heating"],
-      weight: 24,
+      weight: 20,
+    },
+    {
+      terms: ["refrigerateur", "ne refroidit pas"],
+      weight: 20,
+    },
+    {
+      terms: ["lave vaisselle", "ne vidange pas"],
+      weight: 20,
+    },
+    {
+      terms: ["machine a laver", "ne demarre pas"],
+      weight: 20,
+    },
+    {
+      terms: ["four", "ne chauffe pas"],
+      weight: 20,
     },
   ],
 
   Structural: [
     {
-      terms: ["door", "lock"],
-      weight: 18,
+      terms: ["ceiling", "crack"],
+      weight: 20,
     },
     {
-      terms: ["window", "frame"],
+      terms: ["wall", "crack"],
+      weight: 20,
+    },
+    {
+      terms: ["roof", "water"],
       weight: 18,
     },
     {
@@ -1039,15 +699,27 @@ const CATEGORY_COMBINATIONS: Record<
       weight: 18,
     },
     {
-      terms: ["roof", "water"],
+      terms: ["plafond", "fissure"],
+      weight: 20,
+    },
+    {
+      terms: ["mur", "fissure"],
+      weight: 20,
+    },
+    {
+      terms: ["toit", "eau"],
       weight: 18,
     },
     {
-      terms: ["wall", "crack"],
-      weight: 22,
+      terms: ["plafond", "eau"],
+      weight: 18,
     },
     {
-      terms: ["floor", "damage"],
+      terms: ["door", "lock"],
+      weight: 18,
+    },
+    {
+      terms: ["porte", "serrure"],
       weight: 18,
     },
   ],
@@ -1059,19 +731,27 @@ const CATEGORY_COMBINATIONS: Record<
     },
     {
       terms: ["mouse", "droppings"],
-      weight: 24,
+      weight: 25,
     },
     {
       terms: ["rat", "droppings"],
-      weight: 24,
+      weight: 25,
     },
     {
       terms: ["bed bugs", "bedroom"],
-      weight: 24,
+      weight: 25,
     },
     {
-      terms: ["termite", "wood"],
-      weight: 24,
+      terms: ["cafard", "cuisine"],
+      weight: 20,
+    },
+    {
+      terms: ["souris", "excrements"],
+      weight: 25,
+    },
+    {
+      terms: ["rat", "excrements"],
+      weight: 25,
     },
   ],
 };
@@ -1096,226 +776,136 @@ const TECHNICIAN_BY_CATEGORY: Record<
 
 export function technicianRoleFor(
   category: Category,
-) {
+): string {
   return TECHNICIAN_BY_CATEGORY[category];
 }
 
 /* =========================================================
-   NORMALIZATION
+   NEGATION
    ========================================================= */
 
-function normalize(text: string) {
-  return ` ${text
-    .toLowerCase()
-    .replace(/[’]/g, "'")
-    .replace(/[^\w\s'-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()} `;
-}
-
-/* =========================================================
-   NEGATION ENGINE
-   ========================================================= */
-
-/*
- * Negation words/phrases.
- *
- * We intentionally include conversational English,
- * because tenants usually describe problems naturally.
- */
-
-const NEGATION_PATTERNS = [
+const NEGATION_WORDS = [
   "no",
   "not",
+  "without",
   "isn't",
   "isnt",
   "aren't",
   "arent",
-  "wasn't",
-  "wasnt",
-  "weren't",
-  "werent",
-  "don't",
-  "dont",
   "doesn't",
   "doesnt",
-  "didn't",
-  "didnt",
-  "can't",
-  "cant",
-  "cannot",
-  "couldn't",
-  "couldnt",
-  "won't",
-  "wont",
-  "wouldn't",
-  "wouldnt",
-  "without",
+  "don't",
+  "dont",
   "never",
-  "nothing",
-  "none",
-  "neither",
+
+  "pas",
+  "plus",
+  "aucun",
+  "aucune",
+  "sans",
+  "jamais",
+  "n'est pas",
+  "n'est",
+  "nest pas",
+  "ne",
 ];
 
-/*
- * Checks whether a term occurrence is negated.
- *
- * Example:
- *
- * "there isn't any water leaking"
- *
- * => "water leaking" is NEGATED.
- *
- * But:
- *
- * "there isn't any water leaking, but the AC is broken"
- *
- * => the AC evidence remains valid.
- */
-
-function isNegatedAt(
-  text: string,
-  index: number,
-) {
-  const before = text
-    .slice(
-      Math.max(0, index - 70),
-      index,
-    )
-    .trim();
-
-  if (!before) {
-    return false;
-  }
-
-  /*
-   * Strong direct constructions.
-   */
-
-  const strongNegation =
-    /(?:^|\s)(?:there\s+(?:is|are|was|were)\s+(?:no|not)|there's\s+no|there're\s+no|there\s+isn't|there\s+aren't|there\s+wasn't|there\s+weren't)\s+(?:\w+\s+){0,4}$/i;
-
-  if (
-    strongNegation.test(before)
-  ) {
-    return true;
-  }
-
-  /*
-   * Common "I don't have..." constructions.
-   */
-
-  const possessionNegation =
-    /(?:^|\s)(?:i|we|they|he|she)\s+(?:do\s+not|don't|does\s+not|doesn't|did\s+not|didn't)\s+(?:have|see|hear|notice|smell|feel)\s+(?:\w+\s+){0,4}$/i;
-
-  if (
-    possessionNegation.test(before)
-  ) {
-    return true;
-  }
-
-  /*
-   * Generic negation within a short local window.
-   *
-   * We stop at contrast words so that:
-   *
-   * "no leak, but the AC is broken"
-   *
-   * does not contaminate the HVAC evidence.
-   */
-
-  const words = before.split(/\s+/);
-
-  const recentWords = words.slice(-8);
-
-  for (
-    let i = 0;
-    i < recentWords.length;
-    i++
-  ) {
-    const word =
-      recentWords[i];
-
-    if (
-      NEGATION_PATTERNS.includes(
-        word,
-      )
-    ) {
-      return true;
-    }
-
-    /*
-     * "not any water"
-     */
-    if (
-      word === "not" &&
-      recentWords[i + 1] ===
-        "any"
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/*
- * Returns true if at least one NON-negated
- * occurrence of a term exists.
- */
-
-function hasTerm(
+function isNegated(
   text: string,
   term: string,
-) {
-  let searchFrom = 0;
+): boolean {
+  let start = 0;
 
   while (true) {
-    const index =
-      text.indexOf(
-        term,
-        searchFrom,
-      );
+    const index = text.indexOf(
+      term,
+      start,
+    );
 
     if (index === -1) {
       return false;
     }
 
-    if (
-      !isNegatedAt(
-        text,
+    const before = text
+      .slice(
+        Math.max(0, index - 60),
         index,
       )
-    ) {
-      return true;
+      .trim();
+
+    /*
+     * Check direct negation immediately
+     * before the term.
+     */
+    for (const negation of NEGATION_WORDS) {
+      const regex = new RegExp(
+        `(?:^|\\s)${escapeRegex(
+          negation,
+        )}(?:\\s+[\\w'-]+){0,2}\\s*$`,
+        "i",
+      );
+
+      if (regex.test(before)) {
+        start = index + term.length;
+        continue;
+      }
     }
 
-    searchFrom =
-      index + term.length;
+    /*
+     * French constructions:
+     *
+     * "il n'y a pas de fuite"
+     * "je n'ai pas de fuite"
+     * "aucune fuite"
+     * "pas de fumée"
+     */
+    const frenchNegative =
+      /(n'y a pas|n y a pas|n'ai pas|n ai pas|n'est pas|n est pas|aucun|aucune|pas de|sans)\s+(?:[\w'-]+\s+){0,3}$/i.test(
+        before,
+      );
+
+    if (frenchNegative) {
+      start = index + term.length;
+      continue;
+    }
+
+    return false;
   }
 }
+
+function escapeRegex(
+  value: string,
+): string {
+  return value.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
+}
+
+/* =========================================================
+   MATCH HELPERS
+   ========================================================= */
 
 function has(
   text: string,
   terms: string[],
-) {
+): boolean {
   return terms.some(
     (term) =>
-      hasTerm(text, term),
+      text.includes(term) &&
+      !isNegated(text, term),
   );
 }
 
 function countMatches(
   text: string,
   terms: string[],
-) {
+): number {
   return terms.reduce(
     (count, term) =>
       count +
-      (hasTerm(
-        text,
-        term,
-      )
+      (text.includes(term) &&
+      !isNegated(text, term)
         ? 1
         : 0),
     0,
@@ -1323,16 +913,15 @@ function countMatches(
 }
 
 /* =========================================================
-   PRIORITY TERMS
+   SAFETY TERMS
    ========================================================= */
 
 const CRITICAL_TERMS = [
   "active fire",
-  "fire in",
   "fire inside",
+  "fire in",
   "on fire",
   "there is a fire",
-  "there's a fire",
   "there are flames",
   "flames",
   "gas leak",
@@ -1347,10 +936,25 @@ const CRITICAL_TERMS = [
   "electrocution",
   "electrocuted",
   "someone was shocked",
-  "life-threatening",
   "life threatening",
+  "life-threatening",
   "carbon monoxide emergency",
   "carbon monoxide alarm",
+
+  "incendie",
+  "feu",
+  "flammes",
+  "fuite de gaz",
+  "odeur de gaz",
+  "gaz",
+  "explosion",
+  "choc electrique",
+  "choc électrique",
+  "electrocution",
+  "électrocution",
+  "quelqu'un a pris un choc",
+  "danger de mort",
+  "monoxyde de carbone",
 ];
 
 const HIGH_TERMS = [
@@ -1358,10 +962,12 @@ const HIGH_TERMS = [
   "smell of burning",
   "burning odor",
   "burning scent",
+  "smells like burning",
   "smoke",
   "sparks",
   "spark",
   "sparking",
+  "crackling",
   "exposed wiring",
   "exposed wire",
   "exposed live wire",
@@ -1376,8 +982,39 @@ const HIGH_TERMS = [
   "breaker keeps tripping",
   "breaker keeps trip",
   "breaker trips",
-  "breaker trip",
   "keeps tripping",
+  "ceiling collapsing",
+  "roof collapsing",
+  "wall collapsing",
+  "structural collapse",
+
+  "odeur de brule",
+  "odeur de brûlé",
+  "odeur de brule",
+  "sent le brule",
+  "sent le brûlé",
+  "fumee",
+  "fumée",
+  "etincelles",
+  "étincelles",
+  "grésillement",
+  "gresillement",
+  "fil denude",
+  "fil dénudé",
+  "fils denudes",
+  "fils dénudés",
+  "fil sous tension",
+  "inondation",
+  "inonde",
+  "inondé",
+  "refoulement d'egout",
+  "refoulement d'égout",
+  "disjoncteur saute",
+  "disjoncteur qui saute",
+  "plafond qui s'effondre",
+  "toit qui s'effondre",
+  "mur qui s'effondre",
+  "effondrement",
 ];
 
 const LOW_TERMS = [
@@ -1391,6 +1028,25 @@ const LOW_TERMS = [
   "squeak",
   "loose handle",
   "minor",
+
+  "cosmetique",
+  "cosmétique",
+  "peinture",
+  "rayure",
+  "eraflure",
+  "éraflure",
+  "esthetique",
+  "esthétique",
+  "tache",
+  "tâche",
+  "petite tache",
+  "egratigne",
+  "égratigné",
+  "grincement",
+  "poignee desserree",
+  "poignée desserrée",
+  "mineur",
+  "mineure",
 ];
 
 /* =========================================================
@@ -1403,13 +1059,17 @@ function detectCategory(
   category: Category | null;
   strength: number;
 } {
-  const categories =
-    Object.keys(
-      KEYWORDS,
-    ) as Exclude<
-      Category,
-      "Other"
-    >[];
+  const categories: Exclude<
+    Category,
+    "Other"
+  >[] = [
+    "HVAC",
+    "Plumbing",
+    "Electrical",
+    "Appliance",
+    "Structural",
+    "Pest",
+  ];
 
   const scores: Record<
     Exclude<Category, "Other">,
@@ -1424,70 +1084,27 @@ function detectCategory(
   };
 
   /*
-   * ---------------------------------------------------------
-   * STEP 1: Basic keyword evidence
-   * ---------------------------------------------------------
+   * Base keyword scores.
    */
-
-  for (
-    const category of categories
-  ) {
-    scores[category] +=
-      countMatches(
-        text,
-        KEYWORDS[
-          category
-        ],
-      );
+  for (const category of categories) {
+    scores[category] += countMatches(
+      text,
+      TERMS[category],
+    );
   }
 
   /*
-   * ---------------------------------------------------------
-   * STEP 2: Natural-language evidence
-   * ---------------------------------------------------------
+   * Contextual combinations.
    */
-
-  for (
-    const category of categories
-  ) {
-    for (
-      const pattern of NATURAL_PATTERNS[
-        category
-      ]
-    ) {
-      if (
-        hasTerm(
-          text,
-          pattern.phrase,
-        )
-      ) {
-        scores[category] +=
-          pattern.weight;
-      }
-    }
-  }
-
-  /*
-   * ---------------------------------------------------------
-   * STEP 3: Combination evidence
-   * ---------------------------------------------------------
-   */
-
-  for (
-    const category of categories
-  ) {
-    for (
-      const combination of CATEGORY_COMBINATIONS[
-        category
-      ]
-    ) {
+  for (const category of categories) {
+    for (const combination of COMBINATIONS[
+      category
+    ]) {
       const matched =
         combination.terms.every(
           (term) =>
-            hasTerm(
-              text,
-              term,
-            ),
+            text.includes(term) &&
+            !isNegated(text, term),
         );
 
       if (matched) {
@@ -1498,433 +1115,257 @@ function detectCategory(
   }
 
   /*
-   * ---------------------------------------------------------
-   * STEP 4: Appliance priority
+   * =======================================================
+   * STRONG ELECTRICAL CONTEXT
+   * =======================================================
    *
-   * If a specific household appliance is mentioned,
-   * classify as Appliance unless the user clearly describes
-   * the building electrical infrastructure itself.
-   * ---------------------------------------------------------
+   * Outlet + burning smell
+   * Socket + burning smell
+   * Prise + odeur de brûlé
+   *
+   * These MUST be Electrical.
    */
-
-  const applianceMentioned =
-    has(text, [
-      "refrigerator",
-      "fridge",
-      "freezer",
-      "dishwasher",
-      "washing machine",
-      "washer",
-      "dryer",
-      "tumble dryer",
-      "oven",
-      "stove",
-      "cooktop",
-      "microwave",
-      "garbage disposal",
-    ]);
-
-  const applianceElectricalInfrastructure =
+  const electricalEquipment =
     has(text, [
       "outlet",
       "socket",
+      "prise",
+      "prise electrique",
+      "prise électrique",
       "breaker",
-      "circuit breaker",
+      "disjoncteur",
       "electrical panel",
-      "fuse box",
+      "tableau electrique",
+      "tableau électrique",
       "wiring",
-      "exposed wire",
-      "live wire",
+      "cablage",
+      "câblage",
+    ]);
+
+  const burning =
+    has(text, [
+      "burning smell",
+      "smell of burning",
+      "burning odor",
+      "burning scent",
+      "smells like burning",
+      "odeur de brule",
+      "odeur de brûlé",
+      "sent le brule",
+      "sent le brûlé",
     ]);
 
   if (
-    applianceMentioned &&
-    !applianceElectricalInfrastructure
+    electricalEquipment &&
+    burning
   ) {
     return {
-      category: "Appliance",
+      category: "Electrical",
       strength: Math.max(
-        scores.Appliance,
-        25,
+        scores.Electrical,
+        50,
       ),
     };
   }
 
   /*
-   * ---------------------------------------------------------
-   * STEP 5: Strong HVAC contextual detection
-   *
-   * This is the important fix for descriptions such as:
-   *
-   * "My apartment is extremely hot."
-   * "The vents are blowing but the air isn't cold."
-   * "The thermostat doesn't seem to change anything."
-   * ---------------------------------------------------------
+   * =======================================================
+   * STRONG APPLIANCE CONTEXT
+   * =======================================================
    */
+  const appliance =
+    has(text, TERMS.Appliance);
 
-  const heatProblem =
-    has(text, [
-      "apartment is getting hot",
-      "apartment is too hot",
-      "apartment is extremely hot",
-      "apartment is very hot",
-      "room is getting hot",
-      "room is too hot",
-      "room is extremely hot",
-      "room is very hot",
-      "house is getting hot",
-      "house is too hot",
-      "place is getting hot",
-      "place is too hot",
-      "too hot inside",
-      "very hot inside",
-      "extremely hot inside",
-      "hot inside",
-    ]);
+  if (appliance) {
+    /*
+     * If an appliance itself smells burnt,
+     * Appliance is more appropriate than
+     * Electrical unless an electrical component
+     * is explicitly identified.
+     */
+    if (
+      burning &&
+      !electricalEquipment
+    ) {
+      return {
+        category: "Appliance",
+        strength: Math.max(
+          scores.Appliance,
+          40,
+        ),
+      };
+    }
 
-  const coolingProblem =
-    has(text, [
-      "not cooling",
-      "doesn't cool",
-      "does not cool",
-      "can't cool",
-      "cannot cool",
-      "air is not cold",
-      "air isn't cold",
-      "air does not feel cold",
-      "air doesn't feel cold",
-      "warm air from the vents",
-      "warm air coming from the vents",
-      "vents feel warm",
-    ]);
-
-  const HVACControlEvidence =
-    has(text, [
-      "thermostat",
-      "wall control",
-      "changing the temperature",
-      "temperature doesn't change",
-      "temperature does not change",
-    ]);
-
-  const HVACVentEvidence =
-    has(text, [
-      "air coming out of the vents",
-      "air from the vents",
-      "vents are blowing",
-      "vents are blowing warm air",
-      "warm air from the vents",
-      "warm air coming from the vents",
-    ]);
-
-  /*
-   * Strong contextual combination:
-   *
-   * heat + thermostat
-   * heat + vents
-   * heat + cooling
-   * cooling + vents
-   */
-
-  if (
-    (heatProblem &&
-      HVACControlEvidence) ||
-    (heatProblem &&
-      HVACVentEvidence) ||
-    (heatProblem &&
-      coolingProblem) ||
-    (coolingProblem &&
-      HVACVentEvidence) ||
-    (coolingProblem &&
-      HVACControlEvidence)
-  ) {
+    /*
+     * Explicit appliance usually wins.
+     */
     return {
-      category: "HVAC",
+      category: "Appliance",
       strength: Math.max(
-        scores.HVAC,
+        scores.Appliance,
         30,
       ),
     };
   }
 
   /*
-   * Strong direct HVAC equipment evidence.
+   * =======================================================
+   * STRONG HVAC CONTEXT
+   * =======================================================
    */
+  const hvac =
+    has(text, TERMS.HVAC);
 
-  if (
-    has(text, [
-      "air conditioner",
-      "air conditioning",
-      "hvac",
-      "furnace",
-      "heater",
-      "heat pump",
-      "thermostat",
-      "cooling system",
-    ])
-  ) {
+  if (hvac) {
     return {
       category: "HVAC",
       strength: Math.max(
         scores.HVAC,
-        20,
+        25,
       ),
     };
   }
 
   /*
-   * ---------------------------------------------------------
-   * STEP 6: Strong electrical evidence
-   * ---------------------------------------------------------
+   * =======================================================
+   * STRONG PLUMBING CONTEXT
+   * =======================================================
    */
+  const plumbing =
+    has(text, TERMS.Plumbing);
 
+  if (plumbing) {
+    /*
+     * A ceiling/plafond + water leak may be
+     * plumbing rather than structural.
+     *
+     * Water source takes precedence when
+     * there is evidence of an active leak.
+     */
+    if (
+      has(text, [
+        "water leak",
+        "water leakage",
+        "leaking water",
+        "fuite",
+        "fuite d'eau",
+        "fuite d eau",
+        "eau qui fuit",
+      ])
+    ) {
+      return {
+        category: "Plumbing",
+        strength: Math.max(
+          scores.Plumbing,
+          35,
+        ),
+      };
+    }
+
+    return {
+      category: "Plumbing",
+      strength: Math.max(
+        scores.Plumbing,
+        25,
+      ),
+    };
+  }
+
+  /*
+   * =======================================================
+   * STRONG ELECTRICAL CONTEXT
+   * =======================================================
+   */
   if (
-    has(text, [
-      "electrical",
-      "electrician",
-      "electricity",
-      "outlet",
-      "outlets",
-      "socket",
-      "sockets",
-      "breaker",
-      "breakers",
-      "circuit breaker",
-      "electrical panel",
-      "fuse box",
-      "short circuit",
-      "electric shock",
-      "electrical shock",
-      "electrocution",
-      "sparking",
-      "sparks",
-      "exposed wiring",
-      "exposed wire",
-      "live wire",
-      "live wiring",
-    ])
+    has(text, TERMS.Electrical)
   ) {
     return {
       category: "Electrical",
       strength: Math.max(
         scores.Electrical,
-        22,
+        30,
       ),
     };
   }
 
   /*
-   * Natural electrical evidence:
+   * =======================================================
+   * PEST
+   * =======================================================
+   */
+  if (
+    has(text, TERMS.Pest)
+  ) {
+    return {
+      category: "Pest",
+      strength: Math.max(
+        scores.Pest,
+        25,
+      ),
+    };
+  }
+
+  /*
+   * =======================================================
+   * STRUCTURAL
+   * =======================================================
    *
-   * lights stopped working
-   * power went out
-   * etc.
+   * Structural terms are intentionally weaker
+   * when they appear alone.
+   *
+   * "There is water on the ceiling"
+   * should not automatically become Structural.
+   *
+   * "There is a crack in the ceiling"
+   * is clearly Structural.
    */
-
-  if (
-    has(text, [
-      "lights don't work",
-      "lights do not work",
-      "lights stopped working",
-      "light stopped working",
-      "no power",
-      "power is out",
-      "power went out",
-      "electricity is out",
-      "electricity went out",
-    ])
-  ) {
-    return {
-      category: "Electrical",
-      strength: Math.max(
-        scores.Electrical,
-        20,
-      ),
-    };
-  }
-
-  /*
-   * ---------------------------------------------------------
-   * STEP 7: Plumbing
-   * ---------------------------------------------------------
-   */
-
-  if (
-    has(text, [
-      "plumbing",
-      "plumber",
-      "toilet",
-      "sink",
-      "faucet",
-      "tap",
-      "pipe",
-      "pipes",
-      "drain",
-      "shower",
-      "bathtub",
-      "water leak",
-      "water leakage",
-      "leaking water",
-      "water is leaking",
-      "water is dripping",
-      "sewage",
-      "sewer",
-    ])
-  ) {
-    return {
-      category: "Plumbing",
-      strength: Math.max(
-        scores.Plumbing,
-        20,
-      ),
-    };
-  }
-
-  /*
-   * Natural plumbing evidence.
-   */
-
-  if (
-    has(text, [
-      "water on the floor",
-      "floor is wet",
-      "water under the sink",
-      "toilet is clogged",
-      "toilet won't flush",
-      "toilet will not flush",
-      "sink won't drain",
-      "sink will not drain",
-      "low water pressure",
-      "no water pressure",
-      "drain is clogged",
-      "drain is blocked",
-    ])
-  ) {
-    return {
-      category: "Plumbing",
-      strength: Math.max(
-        scores.Plumbing,
-        20,
-      ),
-    };
-  }
-
-  /*
-   * ---------------------------------------------------------
-   * STEP 8: Structural
-   * ---------------------------------------------------------
-   */
-
-  if (
+  const structuralStrong =
     has(text, [
       "structural",
       "roof",
-      "ceiling",
       "wall",
       "floor",
       "door",
       "window",
       "frame",
       "lock",
-      "stairs",
-      "stair",
-    ])
-  ) {
+      "crack",
+      "fissure",
+      "broken door",
+      "broken window",
+      "sagging ceiling",
+      "damaged wall",
+      "toit",
+      "mur",
+      "sol",
+      "porte",
+      "fenetre",
+      "fenêtre",
+      "cadre",
+      "serrure",
+      "fissure",
+      "porte cassee",
+      "porte cassée",
+      "fenetre cassee",
+      "fenêtre cassée",
+      "plafond qui s'affaisse",
+      "mur endommage",
+      "mur endommagé",
+    ]);
+
+  if (structuralStrong) {
     return {
       category: "Structural",
       strength: Math.max(
         scores.Structural,
-        15,
+        25,
       ),
     };
   }
 
   /*
-   * ---------------------------------------------------------
-   * STEP 9: Pest
-   * ---------------------------------------------------------
+   * Ceiling/plafond alone is not enough.
    */
-
-  if (
-    has(text, [
-      "cockroach",
-      "cockroaches",
-      "roach",
-      "roaches",
-      "rat",
-      "rats",
-      "mouse",
-      "mice",
-      "rodent",
-      "rodents",
-      "bed bug",
-      "bed bugs",
-      "bedbug",
-      "bedbugs",
-      "termite",
-      "termites",
-      "ants",
-      "insects",
-      "pest",
-      "pests",
-      "infestation",
-    ])
-  ) {
-    return {
-      category: "Pest",
-      strength: Math.max(
-        scores.Pest,
-        18,
-      ),
-    };
-  }
-
-  /*
-   * ---------------------------------------------------------
-   * STEP 10: Score-based fallback
-   *
-   * Only use a scored category if evidence is meaningful.
-   * Otherwise return Other.
-   * ---------------------------------------------------------
-   */
-
-  let bestCategory:
-    | Exclude<Category, "Other">
-    | null = null;
-
-  let bestScore = 0;
-
-  for (
-    const category of categories
-  ) {
-    if (
-      scores[category] >
-      bestScore
-    ) {
-      bestScore =
-        scores[category];
-
-      bestCategory =
-        category;
-    }
-  }
-
-  /*
-   * Require at least two points of meaningful evidence.
-   */
-
-  if (
-    bestCategory &&
-    bestScore >= 2
-  ) {
-    return {
-      category:
-        bestCategory,
-      strength:
-        bestScore,
-    };
-  }
-
   return {
     category: null,
     strength: 0,
@@ -1940,77 +1381,76 @@ function detectPriority(
   category: Category,
 ): Priority {
   /*
-   * CRITICAL always wins.
+   * CRITICAL
    */
-
   if (
-    has(
-      text,
-      CRITICAL_TERMS,
-    )
+    has(text, CRITICAL_TERMS)
   ) {
     return "Critical";
   }
 
   /*
-   * Burning smell is High.
-   *
-   * But only when the smell is actually present.
-   *
-   * "There is no burning smell"
-   * will NOT trigger this.
+   * HIGH SAFETY CONDITIONS
    */
-
   if (
-    has(text, [
-      "burning smell",
-      "smell of burning",
-      "burning odor",
-      "burning scent",
-    ])
+    has(text, HIGH_TERMS)
   ) {
     return "High";
   }
 
   /*
-   * Other high-risk symptoms.
+   * Electrical-specific combinations.
    */
-
   if (
-    has(
-      text,
-      HIGH_TERMS,
+    category === "Electrical" &&
+    (
+      has(text, [
+        "outlet",
+        "socket",
+        "prise",
+        "prise electrique",
+        "prise électrique",
+      ]) &&
+      has(text, [
+        "burning smell",
+        "smell of burning",
+        "burning odor",
+        "burning scent",
+        "smells like burning",
+        "odeur de brule",
+        "odeur de brûlé",
+        "sent le brule",
+        "sent le brûlé",
+      ])
     )
   ) {
     return "High";
   }
 
   /*
-   * Electrical escalation.
+   * Electrical sparking.
    */
-
   if (
     category === "Electrical" &&
     has(text, [
+      "spark",
       "sparks",
       "sparking",
-      "spark",
-      "exposed wire",
-      "exposed wiring",
-      "live wire",
-      "live wiring",
-      "breaker keeps tripping",
-      "breaker trips",
-      "short circuit",
+      "etincelle",
+      "étincelle",
+      "etincelles",
+      "étincelles",
+      "crackling",
+      "gresillement",
+      "grésillement",
     ])
   ) {
     return "High";
   }
 
   /*
-   * Plumbing escalation.
+   * Plumbing flooding.
    */
-
   if (
     category === "Plumbing" &&
     has(text, [
@@ -2018,38 +1458,60 @@ function detectPriority(
       "flooding",
       "flooded",
       "sewage backup",
+      "inondation",
+      "inonde",
+      "inondé",
+      "refoulement d'egout",
+      "refoulement d'égout",
     ])
   ) {
     return "High";
   }
 
   /*
-   * Appliance overheating/burning.
+   * Structural dangerous conditions.
    */
+  if (
+    category === "Structural" &&
+    has(text, [
+      "ceiling collapsing",
+      "roof collapsing",
+      "wall collapsing",
+      "structural collapse",
+      "plafond qui s'effondre",
+      "toit qui s'effondre",
+      "mur qui s'effondre",
+      "effondrement",
+    ])
+  ) {
+    return "Critical";
+  }
 
+  /*
+   * Appliance dangerous burning/smoke.
+   */
   if (
     category === "Appliance" &&
     has(text, [
       "smoke",
-      "sparks",
-      "sparking",
       "burning smell",
+      "smell of burning",
       "burning odor",
       "burning scent",
+      "fumee",
+      "fumée",
+      "odeur de brule",
+      "odeur de brûlé",
     ])
   ) {
     return "High";
   }
 
   /*
-   * LOW only when no higher-risk symptom exists.
+   * Minor/cosmetic.
    */
-
   if (
-    has(
-      text,
-      LOW_TERMS,
-    )
+    has(text, LOW_TERMS)
   ) {
     return "Low";
   }
@@ -2065,216 +1527,123 @@ function buildProblemSummary(
   text: string,
   category: Category,
   priority: Priority,
-) {
-  const burningSmell =
+  language: Language,
+): string {
+  const burning =
     has(text, [
       "burning smell",
       "smell of burning",
       "burning odor",
       "burning scent",
+      "smells like burning",
+      "odeur de brule",
+      "odeur de brûlé",
+      "sent le brule",
+      "sent le brûlé",
     ]);
 
-  /*
-   * Critical
-   */
-
-  if (
-    priority === "Critical"
-  ) {
-    return "Reported immediate emergency condition. The exact cause cannot be confirmed without an on-site inspection.";
-  }
-
-  /*
-   * HVAC + burning smell
-   */
-
-  if (
-    category === "HVAC" &&
-    burningSmell
-  ) {
-    return "Reported HVAC issue with a burning smell coming from or around the system. Treat as a high-priority safety concern; the exact cause requires professional inspection.";
-  }
-
-  /*
-   * HVAC cooling
-   */
-
-  if (
-    category === "HVAC" &&
+  const waterLeak =
     has(text, [
-      "not cooling",
-      "doesn't cool",
-      "does not cool",
-      "can't cool",
-      "cannot cool",
-      "apartment is getting hot",
-      "apartment is too hot",
-      "room is getting hot",
-      "room is too hot",
-      "too hot inside",
-      "warm air from the vents",
-      "warm air coming from the vents",
-      "vents feel warm",
+      "water leak",
+      "water leakage",
+      "leaking water",
+      "fuite",
+      "fuite d'eau",
+      "fuite d eau",
+      "eau qui fuit",
+    ]);
+
+  if (
+    category === "Electrical" &&
+    burning
+  ) {
+    return language === "fr"
+      ? "Odeur de brûlé signalée au niveau d'un élément électrique. Il peut s'agir d'une surchauffe ou d'un défaut électrique et une inspection professionnelle urgente est nécessaire."
+      : "A burning smell was reported from an electrical component. This may indicate overheating or an electrical fault and requires urgent professional inspection.";
+  }
+
+  if (
+    category === "Electrical" &&
+    has(text, [
+      "spark",
+      "sparks",
+      "sparking",
+      "etincelle",
+      "étincelle",
+      "etincelles",
+      "étincelles",
     ])
   ) {
-    return "Reported indoor temperature or cooling-system problem. The exact cause cannot be confirmed without an on-site HVAC inspection.";
+    return language === "fr"
+      ? "Des étincelles ont été signalées sur le système électrique. Cela peut représenter un risque électrique important et nécessite une inspection professionnelle rapide."
+      : "Electrical sparking was reported. This may represent a significant electrical safety hazard and requires prompt professional inspection.";
   }
-
-  /*
-   * HVAC heating
-   */
 
   if (
-    category === "HVAC" &&
-    has(text, [
-      "not heating",
-      "doesn't heat",
-      "does not heat",
-      "can't heat",
-      "cannot heat",
-      "room won't warm up",
-      "room will not warm up",
-      "house won't warm up",
-      "house will not warm up",
-      "freezing inside",
-      "too cold inside",
-    ])
+    category === "HVAC"
   ) {
-    return "Reported heating-system problem resulting in inadequate indoor heating. The exact cause requires professional HVAC inspection.";
+    return language === "fr"
+      ? "Problème potentiel du système de chauffage ou de climatisation nécessitant une inspection afin d'en déterminer la cause."
+      : "Possible heating or cooling system issue requiring inspection to determine the cause.";
   }
-
-  /*
-   * Electrical
-   */
-
-  if (
-    category === "Electrical"
-  ) {
-    if (
-      has(text, [
-        "spark",
-        "sparks",
-        "sparking",
-      ])
-    ) {
-      return "Reported electrical sparking. This may represent an immediate electrical safety hazard and requires prompt professional inspection.";
-    }
-
-    if (
-      burningSmell
-    ) {
-      return "Reported possible electrical overheating or burning odor. The exact source cannot be confirmed without an on-site inspection.";
-    }
-
-    if (
-      has(text, [
-        "lights stopped working",
-        "lights don't work",
-        "lights do not work",
-        "power went out",
-        "power is out",
-        "no power",
-      ])
-    ) {
-      return "Reported electrical power or lighting failure requiring inspection by a qualified electrician.";
-    }
-
-    return "Possible electrical system issue requiring inspection by a qualified electrician.";
-  }
-
-  /*
-   * Plumbing
-   */
 
   if (
     category === "Plumbing"
   ) {
-    if (
-      has(text, [
-        "flooding",
-        "flooded",
-        "major flooding",
-      ])
-    ) {
-      return "Reported significant water intrusion or flooding requiring prompt plumbing inspection.";
+    if (waterLeak) {
+      return language === "fr"
+        ? "Fuite d'eau potentielle signalée. Une inspection de la plomberie est nécessaire pour déterminer la source et l'étendue du problème."
+        : "A possible water leak was reported. Plumbing inspection is required to determine the source and extent of the problem.";
     }
 
-    if (
-      has(text, [
-        "toilet won't flush",
-        "toilet will not flush",
-        "toilet is clogged",
-      ])
-    ) {
-      return "Reported toilet blockage or flushing problem requiring plumbing inspection.";
-    }
-
-    if (
-      has(text, [
-        "sink won't drain",
-        "sink will not drain",
-        "drain is clogged",
-        "drain is blocked",
-      ])
-    ) {
-      return "Reported drainage problem requiring plumbing inspection.";
-    }
-
-    return "Possible plumbing issue requiring inspection to determine the source and extent of the problem.";
+    return language === "fr"
+      ? "Problème potentiel de plomberie nécessitant une inspection."
+      : "Possible plumbing issue requiring inspection.";
   }
-
-  /*
-   * Appliance
-   */
 
   if (
     category === "Appliance"
   ) {
-    if (
-      burningSmell ||
-      has(text, [
-        "smoke",
-        "sparks",
-        "sparking",
-      ])
-    ) {
-      return "Reported appliance problem accompanied by a possible overheating or electrical safety symptom. Urgent professional inspection is recommended.";
-    }
-
-    return "Possible appliance malfunction requiring inspection by an appliance technician.";
+    return language === "fr"
+      ? "Dysfonctionnement potentiel d'un appareil nécessitant une inspection par un technicien spécialisé."
+      : "Possible appliance malfunction requiring inspection by an appliance technician.";
   }
-
-  /*
-   * Structural
-   */
 
   if (
     category === "Structural"
   ) {
-    return "Possible building or structural maintenance issue requiring inspection.";
+    return language === "fr"
+      ? "Problème potentiel concernant le bâtiment ou un élément structurel nécessitant une inspection."
+      : "Possible building or structural maintenance issue requiring inspection.";
   }
-
-  /*
-   * Pest
-   */
 
   if (
     category === "Pest"
   ) {
-    return "Possible pest infestation requiring assessment and appropriate pest-control treatment.";
+    return language === "fr"
+      ? "Présence potentielle de nuisibles nécessitant une évaluation et un traitement approprié."
+      : "Possible pest infestation requiring assessment and appropriate treatment.";
   }
 
-  /*
-   * Other
-   */
+  if (
+    priority === "Critical"
+  ) {
+    return language === "fr"
+      ? "Situation potentiellement urgente nécessitant une intervention immédiate. La cause exacte doit être confirmée sur place."
+      : "Potential emergency condition requiring immediate attention. The exact cause must be confirmed on site.";
+  }
 
   if (
     priority === "High"
   ) {
-    return "Reported maintenance issue with elevated safety or property-damage risk. The exact source cannot be confirmed without an on-site inspection.";
+    return language === "fr"
+      ? "Problème de maintenance présentant un risque accru pour la sécurité ou le bien immobilier. Une inspection rapide est recommandée."
+      : "Maintenance issue with elevated safety or property-damage risk. Prompt inspection is recommended.";
   }
 
-  return "Maintenance issue reported. The exact cause cannot be confirmed without an on-site inspection.";
+  return language === "fr"
+    ? "Problème de maintenance signalé nécessitant une inspection afin d'en déterminer la cause."
+    : "Maintenance issue reported requiring inspection to determine the cause.";
 }
 
 /* =========================================================
@@ -2285,119 +1654,96 @@ function buildRecommendedAction(
   category: Category,
   priority: Priority,
   text: string,
-) {
-  const burningSmell =
+  language: Language,
+): string {
+  const burning =
     has(text, [
       "burning smell",
       "smell of burning",
       "burning odor",
       "burning scent",
+      "smells like burning",
+      "odeur de brule",
+      "odeur de brûlé",
+      "sent le brule",
+      "sent le brûlé",
     ]);
 
   if (
     priority === "Critical"
   ) {
-    return "Escalate immediately and contact appropriate emergency services when necessary.";
+    return language === "fr"
+      ? "Escalader immédiatement la demande et contacter les services d'urgence lorsque cela est nécessaire."
+      : "Escalate the request immediately and contact emergency services when necessary.";
   }
 
-  /*
-   * HVAC high-risk
-   */
+  if (
+    category === "Electrical" &&
+    priority === "High"
+  ) {
+    return language === "fr"
+      ? "Traiter la situation comme un problème électrique urgent et faire intervenir rapidement un électricien qualifié. En cas de fumée, de feu ou de choc électrique, procéder à une escalade immédiate."
+      : "Treat this as an urgent electrical safety issue and dispatch a qualified electrician promptly. If there is smoke, fire, or electric shock, escalate immediately.";
+  }
 
   if (
-    priority === "High" &&
     category === "HVAC" &&
-    burningSmell
-  ) {
-    return "Stop using the HVAC unit if it is safe to do so, keep occupants away from the equipment, and dispatch an HVAC technician for urgent inspection. Escalate to emergency services if smoke, fire, or another immediate hazard develops.";
-  }
-
-  /*
-   * Electrical high-risk
-   */
-
-  if (
     priority === "High" &&
-    category === "Electrical"
+    burning
   ) {
-    return "Treat as an urgent electrical safety issue and dispatch a qualified electrician for prompt inspection. If there is active smoke, fire, or electric shock, escalate immediately.";
+    return language === "fr"
+      ? "Éviter d'utiliser l'équipement HVAC si cela peut être fait sans danger et faire intervenir rapidement un technicien HVAC pour inspection."
+      : "Avoid using the HVAC equipment if it can be done safely and dispatch an HVAC technician for urgent inspection.";
   }
-
-  /*
-   * Appliance high-risk
-   */
-
-  if (
-    priority === "High" &&
-    category === "Appliance"
-  ) {
-    return "Stop using the affected appliance if it is safe to do so and dispatch an appliance technician for urgent inspection. Escalate immediately if there is active smoke, fire, or electric shock.";
-  }
-
-  /*
-   * Other high-risk
-   */
-
-  if (
-    priority === "High" &&
-    category === "Other"
-  ) {
-    return "Treat as an urgent maintenance concern and dispatch a general maintenance technician for prompt inspection. Escalate immediately if smoke, fire, gas, or another immediate hazard develops.";
-  }
-
-  /*
-   * Generic high-priority
-   */
 
   if (
     priority === "High"
   ) {
-    return `Assign a ${technicianRoleFor(
-      category,
-    )} for urgent inspection and corrective action.`;
+    return language === "fr"
+      ? `Faire intervenir rapidement un ${technicianRoleFor(
+          category,
+        )} pour inspection et intervention corrective.`
+      : `Assign a ${technicianRoleFor(
+          category,
+        )} for urgent inspection and corrective action.`;
   }
 
-  /*
-   * Normal category actions
-   */
+  switch (category) {
+    case "HVAC":
+      return language === "fr"
+        ? "Faire intervenir un technicien HVAC pour inspecter le système de chauffage ou de climatisation."
+        : "Assign an HVAC technician to inspect the heating or cooling system.";
 
-  if (
-    category === "HVAC"
-  ) {
-    return "Assign an HVAC technician to inspect the cooling or heating system.";
+    case "Plumbing":
+      return language === "fr"
+        ? "Faire intervenir un plombier qualifié pour inspecter le système et identifier la source du problème."
+        : "Assign a licensed plumber to inspect the plumbing system and identify the source of the issue.";
+
+    case "Electrical":
+      return language === "fr"
+        ? "Faire intervenir un électricien qualifié pour inspecter le système électrique."
+        : "Assign a licensed electrician to inspect the electrical system.";
+
+    case "Appliance":
+      return language === "fr"
+        ? "Faire intervenir un technicien électroménager pour inspecter l'appareil."
+        : "Assign an appliance technician to inspect the appliance.";
+
+    case "Structural":
+      return language === "fr"
+        ? "Faire intervenir un technicien de maintenance qualifié ou un professionnel compétent pour inspecter la zone concernée."
+        : "Assign qualified maintenance personnel or a contractor to inspect the affected area.";
+
+    case "Pest":
+      return language === "fr"
+        ? "Faire intervenir un technicien de lutte antiparasitaire pour inspecter la zone concernée."
+        : "Assign a pest control technician to inspect the affected area.";
+
+    default:
+      return language === "fr"
+        ? "Faire intervenir un technicien de maintenance générale pour inspecter le problème."
+        : "Assign a general maintenance technician to inspect the reported issue.";
   }
-
-  if (
-    category === "Plumbing"
-  ) {
-    return "Assign a licensed plumber to inspect the plumbing system and identify the source of the issue.";
-  }
-
-  if (
-    category === "Electrical"
-  ) {
-    return "Assign a licensed electrician to inspect the electrical system.";
-  }
-
-  if (
-    category === "Appliance"
-  ) {
-    return "Assign an appliance technician to inspect the appliance.";
-  }
-
-  if (
-    category === "Structural"
-  ) {
-    return "Assign qualified maintenance personnel or a contractor to inspect the affected area.";
-  }
-
-  if (
-    category === "Pest"
-  ) {
-    return "Assign a pest control technician to inspect the affected area.";
-  }
-
-  return "Assign a general maintenance technician to inspect the reported issue.";
 }
 
 /* =========================================================
@@ -2408,56 +1754,60 @@ function buildSafetyAssessment(
   priority: Priority,
   category: Category,
   text: string,
-) {
+  language: Language,
+): string {
   if (
     priority === "Critical"
   ) {
-    return "Immediate safety hazard indicated. Escalate without delay and follow emergency procedures when applicable.";
-  }
-
-  if (
-    priority === "High" &&
-    has(text, [
-      "burning smell",
-      "smell of burning",
-      "burning odor",
-      "burning scent",
-    ])
-  ) {
-    if (
-      category === "HVAC"
-    ) {
-      return "Potential safety hazard indicated by the burning smell from the HVAC system. The equipment should be inspected urgently.";
-    }
-
-    if (
-      category === "Electrical"
-    ) {
-      return "Potential electrical safety hazard indicated by the burning smell. Avoid unsafe contact and arrange urgent inspection by a qualified electrician.";
-    }
-
-    if (
-      category === "Appliance"
-    ) {
-      return "Potential appliance overheating or electrical safety hazard indicated by the burning smell. Avoid using the appliance until it has been inspected.";
-    }
-
-    return "Potential safety hazard indicated by the reported burning smell. Urgent professional inspection is recommended.";
+    return language === "fr"
+      ? "Risque immédiat pour la sécurité détecté. Une escalade sans délai et l'application des procédures d'urgence sont recommandées."
+      : "An immediate safety hazard is indicated. Escalate without delay and follow emergency procedures.";
   }
 
   if (
     priority === "High"
   ) {
-    return "Elevated safety or property-damage risk is indicated by the reported symptoms. Prompt professional inspection is recommended.";
+    if (
+      category === "Electrical"
+    ) {
+      return language === "fr"
+        ? "Risque potentiel de sécurité électrique détecté. Une inspection urgente par un électricien qualifié est recommandée."
+        : "Potential electrical safety hazard detected. Urgent inspection by a qualified electrician is recommended.";
+    }
+
+    if (
+      has(text, [
+        "burning smell",
+        "smell of burning",
+        "burning odor",
+        "burning scent",
+        "odeur de brule",
+        "odeur de brûlé",
+        "sent le brule",
+        "sent le brûlé",
+      ])
+    ) {
+      return language === "fr"
+        ? "Un risque potentiel pour la sécurité est indiqué par l'odeur de brûlé. Une inspection professionnelle urgente est recommandée."
+        : "A potential safety hazard is indicated by the reported burning smell. Urgent professional inspection is recommended.";
+    }
+
+    return language === "fr"
+      ? "Un risque accru pour la sécurité ou le bien immobilier est indiqué. Une inspection rapide est recommandée."
+      : "Elevated safety or property-damage risk is indicated. Prompt professional inspection is recommended.";
   }
 
   if (
     priority === "Low"
   ) {
-    return "No immediate safety hazard is indicated by the information provided.";
+    return language === "fr"
+      ? "Aucun danger immédiat pour la sécurité n'est indiqué par les informations fournies."
+      : "No immediate safety hazard is indicated by the information provided.";
   }
 
-  return "No immediate safety hazard is indicated by the information provided.";
+  return language === "fr"
+    ? "Aucun danger immédiat pour la sécurité n'est indiqué par les informations fournies."
+    : "No immediate safety hazard is indicated by the information provided.";
 }
 
 /* =========================================================
@@ -2467,108 +1817,156 @@ function buildSafetyAssessment(
 function buildFollowUpQuestions(
   category: Category,
   text: string,
+  language: Language,
 ): string[] {
-  if (
-    category === "HVAC"
-  ) {
-    if (
-      has(text, [
-        "burning smell",
-        "smell of burning",
-        "burning odor",
-        "burning scent",
-      ])
-    ) {
-      return [
-        "Has the HVAC unit been turned off?",
-        "Is there any visible smoke or fire?",
-        "Is the burning smell getting stronger?",
-      ];
-    }
-
-    if (
-      has(text, [
-        "not cooling",
-        "doesn't cool",
-        "does not cool",
-        "can't cool",
-        "cannot cool",
-        "apartment is getting hot",
-        "apartment is too hot",
-        "room is getting hot",
-        "room is too hot",
-        "too hot inside",
-      ])
-    ) {
-      return [
-        "Is the HVAC system still running?",
-        "Is the air coming from the vents warm, cool, or room temperature?",
-        "Does changing the thermostat temperature have any effect?",
-      ];
-    }
-
-    return [
-      "Is the system still running?",
-      "Is the system producing any unusual noise or smell?",
-      "Does changing the thermostat affect the system?",
-    ];
-  }
+  const burning =
+    has(text, [
+      "burning smell",
+      "smell of burning",
+      "burning odor",
+      "burning scent",
+      "smells like burning",
+      "odeur de brule",
+      "odeur de brûlé",
+      "sent le brule",
+      "sent le brûlé",
+    ]);
 
   if (
     category === "Electrical"
   ) {
-    return [
-      "Are there sparks or visible smoke?",
-      "Is the affected equipment or outlet still powered?",
-      "Has the breaker tripped?",
-    ];
+    if (burning) {
+      return language === "fr"
+        ? [
+            "La prise ou l'équipement concerné a-t-il été éteint ?",
+            "Y a-t-il de la fumée ou des flammes visibles ?",
+            "L'odeur de brûlé devient-elle plus forte ?",
+          ]
+        : [
+            "Has the affected outlet or equipment been turned off?",
+            "Is there any visible smoke or fire?",
+            "Is the burning smell getting stronger?",
+          ];
+    }
+
+    return language === "fr"
+      ? [
+          "Y a-t-il des étincelles ou de la fumée visible ?",
+          "L'équipement concerné est-il toujours sous tension ?",
+          "Le disjoncteur a-t-il sauté ?",
+        ]
+      : [
+          "Are there sparks or visible smoke?",
+          "Is the affected equipment still powered?",
+          "Has the breaker tripped?",
+        ];
+  }
+
+  if (
+    category === "HVAC"
+  ) {
+    if (burning) {
+      return language === "fr"
+        ? [
+            "Le système HVAC a-t-il été éteint ?",
+            "Y a-t-il de la fumée ou des flammes visibles ?",
+            "L'odeur de brûlé devient-elle plus forte ?",
+          ]
+        : [
+            "Has the HVAC system been turned off?",
+            "Is there any visible smoke or fire?",
+            "Is the burning smell getting stronger?",
+          ];
+    }
+
+    return language === "fr"
+      ? [
+          "Le système fonctionne-t-il toujours ?",
+          "Y a-t-il une fuite d'eau ?",
+          "Le système produit-il un bruit ou une odeur inhabituelle ?",
+        ]
+      : [
+          "Is the system still running?",
+          "Is there any water leaking?",
+          "Is the system producing an unusual noise or smell?",
+        ];
   }
 
   if (
     category === "Plumbing"
   ) {
-    return [
-      "Is the water leak or plumbing problem still active?",
-      "How much water is leaking or accumulating?",
-      "Can the water supply be safely shut off?",
-    ];
+    return language === "fr"
+      ? [
+          "La fuite d'eau est-elle toujours active ?",
+          "Quelle est la quantité d'eau qui fuit ?",
+          "L'arrivée d'eau peut-elle être coupée sans danger ?",
+        ]
+      : [
+          "Is the water leak still active?",
+          "How much water is leaking?",
+          "Can the water supply be safely shut off?",
+        ];
   }
 
   if (
     category === "Appliance"
   ) {
-    return [
-      "Is the appliance still running?",
-      "Is there any unusual noise, heat, smoke, or smell?",
-      "Does the appliance have power?",
-    ];
+    return language === "fr"
+      ? [
+          "L'appareil fonctionne-t-il toujours ?",
+          "Y a-t-il un bruit ou une odeur inhabituelle ?",
+          "L'appareil est-il alimenté en électricité ?",
+        ]
+      : [
+          "Is the appliance still running?",
+          "Is there any unusual noise or smell?",
+          "Does the appliance have power?",
+        ];
   }
 
   if (
     category === "Structural"
   ) {
-    return [
-      "Is the affected area still usable?",
-      "Is there visible damage, movement, or cracking?",
-      "Is there any water intrusion?",
-    ];
+    return language === "fr"
+      ? [
+          "La zone concernée est-elle toujours utilisable ?",
+          "Y a-t-il des dommages visibles, un mouvement ou des fissures ?",
+          "Y a-t-il une infiltration d'eau ?",
+        ]
+      : [
+          "Is the affected area still usable?",
+          "Is there visible damage, movement, or cracking?",
+          "Is there any water intrusion?",
+        ];
   }
 
   if (
     category === "Pest"
   ) {
-    return [
-      "Where were the pests observed?",
-      "How many were seen?",
-      "Are there signs of an active infestation?",
-    ];
+    return language === "fr"
+      ? [
+          "Où les nuisibles ont-ils été observés ?",
+          "Combien en avez-vous vus ?",
+          "Y a-t-il des signes d'une infestation active ?",
+        ]
+      : [
+          "Where were the pests observed?",
+          "How many were seen?",
+          "Are there signs of an active infestation?",
+        ];
   }
 
-  return [
-    "Is the issue still occurring?",
-    "When did the problem start?",
-    "Has anything been done to resolve it?",
-  ];
+  return language === "fr"
+    ? [
+        "Le problème se produit-il toujours ?",
+        "Quand le problème a-t-il commencé ?",
+        "Une intervention a-t-elle déjà été effectuée ?",
+      ]
+    : [
+        "Is the issue still occurring?",
+        "When did the problem start?",
+        "Has anything been done to resolve it?",
+      ];
 }
 
 /* =========================================================
@@ -2582,53 +1980,47 @@ export function analyzeMaintenanceRequest(
     selectedPriority?: Priority | "";
   },
 ): Analysis {
+  const language =
+    detectLanguage(
+      input.description,
+    );
+
   const text =
     normalize(
       input.description,
     );
 
-  /*
-   * Automatic classification.
-   */
-
   const detected =
     detectCategory(text);
 
   /*
-   * Explicit category selected by the user
-   * has priority over automatic classification.
+   * Manual category selection is respected
+   * when explicitly supplied.
+   *
+   * Otherwise automatic classification wins.
    */
-
   const category: Category =
     input.selectedCategory ||
     detected.category ||
     "Other";
 
   /*
-   * Determine priority from the actual description.
+   * Priority is ALWAYS analyzed from
+   * the actual description.
    */
-
   const detectedPriority =
     detectPriority(
       text,
       category,
     );
 
-  /*
-   * Safety escalation wins.
-   *
-   * Critical cannot become High/Medium/Low.
-   * High cannot become Medium/Low.
-   *
-   * But if the detected priority is Medium/Low,
-   * the user's selected priority is respected.
-   */
-
   let priority: Priority;
 
+  /*
+   * Safety escalation cannot be downgraded.
+   */
   if (
-    detectedPriority ===
-    "Critical"
+    detectedPriority === "Critical"
   ) {
     priority = "Critical";
   } else if (
@@ -2645,7 +2037,7 @@ export function analyzeMaintenanceRequest(
       detectedPriority;
   }
 
-  const riskLevel: RiskLevel =
+  const riskLevel =
     priority;
 
   const problemSummary =
@@ -2653,6 +2045,7 @@ export function analyzeMaintenanceRequest(
       text,
       category,
       priority,
+      language,
     );
 
   const recommendedAction =
@@ -2660,6 +2053,7 @@ export function analyzeMaintenanceRequest(
       category,
       priority,
       text,
+      language,
     );
 
   const technician =
@@ -2671,6 +2065,7 @@ export function analyzeMaintenanceRequest(
     buildFollowUpQuestions(
       category,
       text,
+      language,
     );
 
   const safetyAssessment =
@@ -2678,69 +2073,62 @@ export function analyzeMaintenanceRequest(
       priority,
       category,
       text,
+      language,
     );
 
   /*
    * =======================================================
    * CONFIDENCE
    * =======================================================
-   *
-   * Confidence represents classification evidence,
-   * not certainty about the physical diagnosis.
    */
 
   let confidence = 0.72;
 
   if (
-    detected.category ===
-    category
+    detected.category === category
   ) {
     confidence += 0.10;
   }
 
   if (
-    detected.strength >= 10
+    detected.strength >= 20
   ) {
-    confidence += 0.06;
+    confidence += 0.08;
   }
 
   if (
-    detected.strength >= 20
+    detected.strength >= 40
   ) {
     confidence += 0.05;
   }
 
-  if (
-    detected.strength >= 30
-  ) {
-    confidence += 0.04;
-  }
-
+  /*
+   * Other should never claim extremely
+   * high confidence.
+   */
   if (
     category === "Other"
   ) {
     confidence = Math.min(
       confidence,
-      0.82,
+      0.80,
     );
   }
 
   if (
     priority === "Critical"
   ) {
-    confidence =
-      Math.max(
-        confidence,
-        0.95,
-      );
+    confidence = Math.max(
+      confidence,
+      0.96,
+    );
   } else if (
     priority === "High"
   ) {
-    confidence =
-      Math.max(
-        confidence,
-        0.91,
-      );
+    confidence = Math.max(
+      confidence,
+      0.92,
+    );
   }
 
   confidence = Math.min(
@@ -2751,6 +2139,7 @@ export function analyzeMaintenanceRequest(
   );
 
   return {
+    language,
     category,
     priority,
     riskLevel,
@@ -2772,32 +2161,43 @@ export function suggestedTenantResponse(
     tenant: string;
     analysis: Analysis;
   },
-) {
+): string {
   const {
     tenant,
     analysis,
   } = input;
 
+  const language =
+    analysis.language;
+
   if (
     analysis.priority ===
     "Critical"
   ) {
-    return `Hi ${tenant}, thank you for reporting this issue. We are treating it as an urgent safety matter and escalating it immediately. Please avoid the affected area or equipment if it is unsafe to approach, and contact emergency services if there is an immediate danger.`;
+    return language === "fr"
+      ? `Bonjour ${tenant}, merci d'avoir signalé ce problème. Nous le traitons comme une situation urgente présentant un risque pour la sécurité et nous procédons immédiatement à son escalade. Évitez la zone ou l'équipement concerné s'il présente un danger et contactez les services d'urgence en cas de danger immédiat.`
+      : `Hi ${tenant}, thank you for reporting this issue. We are treating it as an urgent safety matter and escalating it immediately. Please avoid the affected area or equipment if it is unsafe, and contact emergency services if there is an immediate danger.`;
   }
 
   if (
     analysis.priority ===
     "High"
   ) {
-    return `Hi ${tenant}, thank you for reporting this issue. We have identified it as a high-priority maintenance concern and will arrange an urgent inspection by a ${analysis.technician}. Please avoid using the affected equipment if doing so could be unsafe.`;
+    return language === "fr"
+      ? `Bonjour ${tenant}, merci d'avoir signalé ce problème. Nous l'avons identifié comme une demande de maintenance prioritaire et allons organiser rapidement une inspection par un ${analysis.technician}. Évitez d'utiliser l'équipement concerné si cela peut présenter un danger.`
+      : `Hi ${tenant}, thank you for reporting this issue. We have identified it as a high-priority maintenance concern and will arrange an urgent inspection by a ${analysis.technician}. Please avoid using the affected equipment if doing so could be unsafe.`;
   }
 
   if (
     analysis.priority ===
     "Medium"
   ) {
-    return `Hi ${tenant}, thank you for reporting this issue. We have logged your maintenance request and will arrange for a ${analysis.technician} to inspect it. We will provide an update once the inspection is scheduled.`;
+    return language === "fr"
+      ? `Bonjour ${tenant}, merci d'avoir signalé ce problème. Votre demande de maintenance a été enregistrée et nous allons organiser une inspection par un ${analysis.technician}. Nous vous tiendrons informé de la planification de l'intervention.`
+      : `Hi ${tenant}, thank you for reporting this issue. We have logged your maintenance request and will arrange for a ${analysis.technician} to inspect it. We will provide an update once the inspection is scheduled.`;
   }
 
-  return `Hi ${tenant}, thank you for reporting this issue. We have logged your maintenance request and will arrange for a ${analysis.technician} to review it.`;
+  return language === "fr"
+    ? `Bonjour ${tenant}, merci d'avoir signalé ce problème. Votre demande de maintenance a été enregistrée et nous allons organiser son inspection par un ${analysis.technician}.`
+    : `Hi ${tenant}, thank you for reporting this issue. We have logged your maintenance request and will arrange for a ${analysis.technician} to review it.`;
 }
