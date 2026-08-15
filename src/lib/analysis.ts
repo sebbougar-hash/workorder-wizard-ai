@@ -480,7 +480,7 @@ export function suggestedTenantResponse(opts: {
       ? "This has been escalated as an emergency and is being handled immediately."
       : opts.analysis.riskLevel === "High"
         ? "This has been flagged for prompt inspection by a qualified professional."
-        : `A ${opts.analysis.technician.toLowerCase()} will be assigned to inspect it.`;
+        : `${/^[aeiou]/i.test(opts.analysis.technician) ? "An" : "A"} ${opts.analysis.technician.toLowerCase()} will be assigned to inspect it.`;
   return `Hi ${first},
 
 Thank you for reporting the maintenance issue.
