@@ -9,6 +9,7 @@ export type Category =
 
 export type Priority = "Low" | "Medium" | "High" | "Critical";
 export type RiskLevel = Priority;
+
 export type Status =
   | "New"
   | "Under Review"
@@ -70,6 +71,8 @@ const KEYWORDS: Record<Exclude<Category, "Other">, string[]> = {
     "heating",
     "thermostat",
     "cooling system",
+    "cooling",
+    "not cooling",
     "heat pump",
     "refrigerant",
     "condenser",
@@ -123,6 +126,7 @@ const KEYWORDS: Record<Exclude<Category, "Other">, string[]> = {
     "electrical shock",
     "electric shock",
     "electrocution",
+    "electrocuted",
     "exposed wiring",
     "exposed wire",
     "live wire",
@@ -176,35 +180,35 @@ const CATEGORY_COMBINATIONS: Record<
   HVAC: [
     {
       terms: ["air conditioner", "not cooling"],
-      weight: 8,
+      weight: 10,
     },
     {
       terms: ["air conditioning", "not cooling"],
-      weight: 8,
+      weight: 10,
     },
     {
       terms: ["air conditioner", "burning smell"],
-      weight: 12,
+      weight: 15,
     },
     {
       terms: ["air conditioning", "burning smell"],
-      weight: 12,
+      weight: 15,
     },
     {
       terms: ["hvac", "burning smell"],
-      weight: 12,
+      weight: 15,
     },
     {
       terms: ["furnace", "burning smell"],
-      weight: 12,
+      weight: 15,
     },
     {
       terms: ["heater", "burning smell"],
-      weight: 12,
+      weight: 15,
     },
     {
       terms: ["cooling system", "burning smell"],
-      weight: 12,
+      weight: 15,
     },
     {
       terms: ["thermostat", "heating"],
@@ -420,36 +424,38 @@ function normalize(text: string) {
 }
 
 /*
- * Checks whether a term is actually negated.
+ * Checks whether a specific occurrence of a term is negated.
  *
- * Examples:
- * "no smoke" -> smoke is negated
- * "without sparks" -> sparks are negated
- * "not cooling" -> cooling is NOT considered a negated "burning smell"
+ * Important:
+ * We only inspect a short window immediately before the term.
  *
- * The important point is that the negation window is intentionally short.
+ * This prevents:
+ *
+ * "not cooling and there is a burning smell"
+ *
+ * from incorrectly treating "burning smell" as negated.
  */
 function negated(text: string, term: string) {
   let searchFrom = 0;
 
   while (true) {
-    const idx = text.indexOf(term, searchFrom);
+    const index = text.indexOf(term, searchFrom);
 
-    if (idx < 0) {
+    if (index === -1) {
       return false;
     }
 
     const before = text
-      .slice(Math.max(0, idx - 30), idx)
+      .slice(Math.max(0, index - 40), index)
       .trim();
 
     const directNegation =
-      /(?:^|\s)(?:no|without|isn't|is not|aren't|are not|there is no|there are no)\s+(?:[\w'-]+\s+){0,1}$/i.test(
+      /(?:^|\s)(?:no|without|isn't|is not|aren't|are not|there is no|there are no)\s+(?:[\w'-]+\s+){0,2}$/i.test(
         before,
       );
 
     if (directNegation) {
-      searchFrom = idx + term.length;
+      searchFrom = index + term.length;
       continue;
     }
 
@@ -472,7 +478,8 @@ function countMatches(
   return terms.reduce(
     (count, term) =>
       count +
-      (text.includes(term) && !negated(text, term)
+      (text.includes(term) &&
+      !negated(text, term)
         ? 1
         : 0),
     0,
@@ -545,33 +552,6 @@ const LOW_TERMS = [
   "minor",
 ];
 
-const WATER_TERMS = [
-  "water",
-  "leak",
-  "leaking",
-  "wet",
-  "flood",
-  "moisture",
-  "dripping",
-];
-
-const ELECTRIC_PROXIMITY_TERMS = [
-  "outlet",
-  "outlets",
-  "socket",
-  "sockets",
-  "electrical",
-  "electricity",
-  "wiring",
-  "wire",
-  "wires",
-  "breaker",
-  "breakers",
-  "panel",
-  "light switch",
-  "electrical equipment",
-];
-
 function detectCategory(text: string): {
   category: Category | null;
   strength: number;
@@ -585,16 +565,20 @@ function detectCategory(text: string): {
 
   for (const category of categories) {
     let score =
-      countMatches(text, KEYWORDS[category]) * 2;
+      countMatches(
+        text,
+        KEYWORDS[category],
+      ) * 2;
 
     for (const combination of CATEGORY_COMBINATIONS[
       category
     ]) {
-      const matches = combination.terms.every(
-        (term) =>
-          text.includes(term) &&
-          !negated(text, term),
-      );
+      const matches =
+        combination.terms.every(
+          (term) =>
+            text.includes(term) &&
+            !negated(text, term),
+        );
 
       if (matches) {
         score += combination.weight;
@@ -608,11 +592,10 @@ function detectCategory(text: string): {
   }
 
   /*
-   * Special rule:
-   *
-   * If the request contains HVAC language together with
-   * "burning smell", HVAC wins unless there is explicit
-   * electrical equipment involved.
+   * HVAC + burning smell should remain HVAC
+   * unless the user explicitly identifies an
+   * electrical component such as an outlet,
+   * breaker, panel, or wiring.
    */
   const hvacEvidence = has(text, [
     "air conditioner",
@@ -620,7 +603,9 @@ function detectCategory(text: string): {
     "hvac",
     "furnace",
     "heater",
+    "heating",
     "cooling system",
+    "cooling",
     "heat pump",
   ]);
 
@@ -631,20 +616,23 @@ function detectCategory(text: string): {
     "burning scent",
   ]);
 
-  const explicitElectricalEquipment = has(
-    text,
-    [
+  const explicitElectricalEquipment =
+    has(text, [
       "outlet",
+      "outlets",
       "socket",
+      "sockets",
       "breaker",
+      "breakers",
       "electrical panel",
       "wiring",
+      "wire",
+      "wires",
       "exposed wire",
       "exposed wiring",
       "live wire",
       "live wiring",
-    ],
-  );
+    ]);
 
   if (
     hvacEvidence &&
@@ -675,24 +663,21 @@ function detectPriority(
   category: Category,
 ): Priority {
   /*
-   * CRITICAL has precedence over everything else.
+   * CRITICAL has absolute precedence.
    */
   if (has(text, CRITICAL_TERMS)) {
     return "Critical";
   }
 
   /*
-   * HIGH:
-   *
-   * A burning smell is an immediate safety concern.
-   * This remains HIGH even when it appears together with
-   * "not cooling".
+   * A burning smell is ALWAYS HIGH unless
+   * the user explicitly negates it.
    *
    * Example:
-   * "The air conditioner is not cooling and there is
-   * a burning smell coming from the unit."
+   * "The air conditioner is not cooling and
+   * there is a burning smell coming from the unit."
    *
-   * => HIGH
+   * => High
    */
   const burningSmell = has(text, [
     "burning smell",
@@ -705,12 +690,15 @@ function detectPriority(
     return "High";
   }
 
+  /*
+   * Other known high-risk conditions.
+   */
   if (has(text, HIGH_TERMS)) {
     return "High";
   }
 
   /*
-   * Category-specific safety escalation.
+   * Electrical-specific escalation.
    */
   if (
     category === "Electrical" &&
@@ -724,11 +712,15 @@ function detectPriority(
       "live wiring",
       "breaker keeps tripping",
       "breaker trips",
+      "short circuit",
     ])
   ) {
     return "High";
   }
 
+  /*
+   * Plumbing-specific escalation.
+   */
   if (
     category === "Plumbing" &&
     has(text, [
@@ -741,6 +733,9 @@ function detectPriority(
     return "High";
   }
 
+  /*
+   * Cosmetic/minor issues are LOW.
+   */
   if (has(text, LOW_TERMS)) {
     return "Low";
   }
@@ -800,6 +795,7 @@ function buildProblemSummary(
       has(text, [
         "burning smell",
         "burning odor",
+        "burning scent",
       ])
     ) {
       return "Reported possible electrical overheating or burning odor. The exact source cannot be confirmed without an on-site inspection.";
@@ -863,7 +859,9 @@ function buildRecommendedAction(
   }
 
   if (priority === "High") {
-    return `Assign a ${technicianRoleFor(category)} for urgent inspection and corrective action.`;
+    return `Assign a ${technicianRoleFor(
+      category,
+    )} for urgent inspection and corrective action.`;
   }
 
   if (category === "HVAC") {
@@ -949,6 +947,7 @@ function buildFollowUpQuestions(
         "burning smell",
         "smell of burning",
         "burning odor",
+        "burning scent",
       ])
     ) {
       return [
@@ -1018,8 +1017,8 @@ export function analyzeMaintenanceRequest(input: {
   const detected = detectCategory(text);
 
   /*
-   * Use the user's selected category when provided.
-   * Otherwise use the classifier.
+   * Use selected category when the user chose one.
+   * Otherwise use automatic classification.
    */
   const category: Category =
     input.selectedCategory ||
@@ -1027,10 +1026,7 @@ export function analyzeMaintenanceRequest(input: {
     "Other";
 
   /*
-   * Priority is calculated from the description.
-   *
-   * Safety signals have precedence over ordinary
-   * maintenance symptoms.
+   * Calculate priority from the actual description.
    */
   const detectedPriority = detectPriority(
     text,
@@ -1038,13 +1034,13 @@ export function analyzeMaintenanceRequest(input: {
   );
 
   /*
-   * Do not allow a manually selected lower priority
-   * to hide an explicit safety emergency.
+   * Safety escalation always wins.
    *
-   * For example:
+   * Example:
    * selectedPriority = Medium
-   * description = "burning smell"
-   * result = High
+   * description = burning smell
+   *
+   * Final priority = High
    */
   let priority: Priority = detectedPriority;
 
@@ -1089,7 +1085,7 @@ export function analyzeMaintenanceRequest(input: {
     );
 
   /*
-   * Confidence is deterministic.
+   * Deterministic confidence score.
    */
   let confidence = 0.78;
 
@@ -1102,9 +1098,15 @@ export function analyzeMaintenanceRequest(input: {
   }
 
   if (priority === "Critical") {
-    confidence = Math.max(confidence, 0.95);
+    confidence = Math.max(
+      confidence,
+      0.95,
+    );
   } else if (priority === "High") {
-    confidence = Math.max(confidence, 0.91);
+    confidence = Math.max(
+      confidence,
+      0.91,
+    );
   }
 
   confidence = Math.min(
